@@ -1,0 +1,261 @@
+options {
+  STATIC = false;
+}
+
+PARSER_BEGIN(WhileParser)
+  package parser;
+
+  import syntaxtree.*;
+  import java.util.List;
+  import java.util.LinkedList;
+  public class WhileParser {
+    private Token tagToken;
+    private <T extends AST> T tag(T ast, Token t) {
+      ast.tag(t.beginLine, t.beginColumn);
+      return ast;
+    }
+    private <T extends AST> T tag(T ast, AST sub) {
+        ast.tag(sub.getTags());
+        return ast;
+    }
+  }
+PARSER_END(WhileParser)
+
+SKIP : /* Define white-space and comments here */
+{
+    " "
+  | "\t"
+  | "\n"
+  | "\r"
+  | "\f"
+  | < "//" (~["\n","\r"])* ("\n"|"\r"|"\r\n") >
+  | <"/*" (~["*"])* "*" ("*" | (~["*","/"] (~["*"])* "*"))* "/">
+}
+
+TOKEN : /* Define the While-language tokens here. */
+{
+  < POSINT: (["0"-"9"])+ >
+| < NEGINT: "-"(["0"-"9"])+ >
+| < LPAREN: "(" >
+| < RPAREN: ")" >
+| < PROC: "proc" >
+| < TRUE: "true" >
+| < FALSE: "false" >
+| < NOT: "!" >
+| < LBRACE: "{" >
+| < RBRACE: "}" >
+| < SEMICOLON: ";" >
+| < ASSIGN: "=" >
+| < AND : "&&" >
+| < OR : "||" >
+| < LESSTHAN: "<" >
+| < GREATERTHAN: ">" >
+| < EQUALS: "==" >
+| < DIV: "/" >
+| < PLUS: "+" >
+| < MINUS: "-" >
+| < TIMES: "*" >
+| < COMMA: "," >
+| < ELSE: "else" >
+| < IF: "if" >
+| < WHILE: "while" >
+| < RETURN: "return" >
+| < IN: "in" >
+| < OUT: "out" >
+| < ID: ["a"-"z","A"-"Z"](["a"-"z","A"-"Z","0"-"9","_"])* >
+}
+
+/************************************
+ * The grammar starts here *
+ ************************************/
+
+
+public Program nt_Program() :
+{
+  Cmd s;
+  List<Cmd> ss = new LinkedList<Cmd>();
+  ProcDecl pd;
+  List<ProcDecl> pds = new LinkedList<ProcDecl>();
+}
+{
+  ( s=nt_Cmd() { ss.add(s); } )* (pd=nt_ProcDecl() { pds.add(pd); })*
+  <EOF>
+  { return new Program(ss, pds); }
+}
+
+public ProcDecl nt_ProcDecl() :
+{
+  Token t;
+  List<Var> infs;
+  List<Var> outfs;
+  Cmd s;
+  List<Cmd> ss = new LinkedList<Cmd>();
+  Exp re;
+}
+{
+  <PROC> t=<ID> <LPAREN> infs = nt_InFormals() outfs = nt_OutFormals() <RPAREN>
+    <LBRACE>
+      (s=nt_Cmd() {ss.add(s); })*
+    <RBRACE>
+  {
+    return tag(new ProcDecl(t.image, infs, outfs, ss), t);
+  }
+}
+
+public List<Var> nt_InFormals() :
+{
+  List<Var> vs;
+}
+{
+   ( <IN> vs=nt_VarList() <SEMICOLON> { return vs; } )
+ | { return new LinkedList<Var>(); }
+}
+
+public List<Var> nt_OutFormals() :
+{
+  List<Var> vs;
+}
+{
+   <OUT> vs=nt_VarList() { return vs; }
+}
+
+public List<Var> nt_VarList() :
+{
+  Var v;
+  List<Var> fs = new LinkedList<Var>();
+  Token t;
+}
+{
+    t=<ID>
+    { v = new Var(t.image); fs.add(tag(v, t)); }
+    (v=nt_VarRest() { fs.add(v); })*
+    { return fs; }
+}
+
+public Var nt_VarRest() :
+{
+  Token t;
+}
+{
+  <COMMA> t=<ID>
+  { return tag(new Var(t.image), t); }
+}
+
+private CmdBlock Block() :
+{
+  Cmd s;
+  List<Cmd> ss = new LinkedList<Cmd>();
+}
+{
+  <LBRACE> ( s=nt_Cmd() { ss.add(s); } )* <RBRACE>
+  { return new CmdBlock(ss); }
+}
+
+public Cmd nt_Cmd() :
+{
+  CmdBlock b;
+  Cmd s, s1, s2;
+  List<Exp> ais = new LinkedList<Exp>();
+  List<Var> aos = new LinkedList<Var>();
+  Exp e, e1, e2;
+  Token t, t1;
+}
+{
+    b=Block()
+    { return b; }
+  | t=<ID> (
+              t1=<ASSIGN> e=nt_Exp() <SEMICOLON>
+              { Var v = new Var(t.image); tag(v, t); return tag(new CmdAssign(v, e), t1); }
+            | <LPAREN> ais=nt_ExpList() aos = nt_VarList() <RPAREN> <SEMICOLON>
+              { return tag(new CmdCall(t.image, ais, aos), t); }
+           )
+  | t1=<IF> <LPAREN> e=nt_Exp() <RPAREN> s1=nt_Cmd() <ELSE> s2=nt_Cmd()
+    { return tag(new CmdIf(e, s1, s2), t1); }
+  | t1=<WHILE> <LPAREN> e=nt_Exp() <RPAREN> s=nt_Cmd()
+    { return tag(new CmdWhile(e, s), t1); }
+}
+
+public List<Exp> nt_ExpList() :
+{
+  List<Exp> es;
+}
+{
+  LOOKAHEAD(inActuals())
+    es=inActuals() { return es; }
+  | { return new LinkedList<Exp>(); }
+}
+
+public Exp nt_Exp() :
+{
+  Exp e1, e2;
+  ExpOp.Op op;
+}
+{
+    e1=nt_PrimaryExp()
+    (
+        op=nt_Op() e2=nt_PrimaryExp()
+        { return tag(new ExpOp(e1, op, e2), tagToken); }
+      | {}
+        { return e1; }
+    )
+}
+
+public ExpOp.Op nt_Op() :
+{}
+{
+   tagToken = <AND> { return ExpOp.Op.AND; }
+ | tagToken = <OR> { return ExpOp.Op.OR; }
+ | tagToken = <LESSTHAN> { return ExpOp.Op.LESSTHAN; }
+ | tagToken = <GREATERTHAN> { return ExpOp.Op.GREATERTHAN; }
+ | tagToken = <EQUALS> { return ExpOp.Op.EQUALS; }
+ | tagToken = <DIV> { return ExpOp.Op.DIV; }
+ | tagToken = <PLUS> { return ExpOp.Op.PLUS; }
+ | tagToken = <MINUS> { return ExpOp.Op.MINUS; }
+ | tagToken = <TIMES> { return ExpOp.Op.TIMES; }
+}
+
+public Exp nt_PrimaryExp() :
+{
+  Token t, t1;
+  int n;
+  Exp e;
+  List<Exp> es;
+}
+{
+    n=nt_IntLit()
+    { return tag(new ExpInteger(n), tagToken); }
+  | t=<TRUE>
+    { return tag(new ExpTrue(), t); }
+  | t=<FALSE>
+    { return tag(new ExpFalse(), t); }
+  | t=<ID>
+    { return tag(new ExpVar(tag(new Var(t.image), t)), t); }
+  | t=<NOT> e=nt_PrimaryExp()
+    { return tag(new ExpNot(e), t); }
+  | t=<LPAREN> e=nt_Exp() <RPAREN>
+    { return e; }
+
+}
+
+private List<Exp> inActuals() :
+{
+  Exp e;
+  List<Exp> es = new LinkedList<Exp>();
+}
+{
+    e=nt_Exp() { es.add(e); } ( e=nt_ExpRest() { es.add(e); })* <SEMICOLON>
+    { return es; }
+}
+
+public Exp nt_ExpRest() :
+{ Exp e; }
+{
+  <COMMA> e=nt_Exp()
+  { return e; }
+}
+
+public int nt_IntLit() :
+{}
+{
+  (tagToken = <POSINT> | tagToken = <NEGINT>) { return Integer.parseInt(tagToken.image); }
+}
