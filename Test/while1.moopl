@@ -1,4 +1,0 @@
-proc main() {
-  // condition has wrong type
-  while (1) do {}
-}

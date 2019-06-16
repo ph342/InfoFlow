@@ -1,0 +1,53 @@
+[ENV]
+# Java.exe directory
+SET: JAVA: C:\Program Files\Java\jdk-11\bin\java.exe
+
+# Binaries directory
+SET: BIN: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\bin
+
+# Program sources directory
+SET: SOURCES: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\test\programs
+
+APP: $JAVA
+     -cp
+     $BIN
+     Analyse
+     -pretty
+     -tree
+
+################################################################################################
+[01]
+NAME: Swap values of 2 variables
+APP: $APP
+     $SOURCES\swap
+STDOUT: swap-$FUNCTION.txt
+
+[02]
+NAME: Swap values of 2 variables (procedural)
+APP: $APP
+     $SOURCES\swap-procedural
+STDOUT: swap-procedural-$FUNCTION.txt
+
+[03]
+NAME: Pass same variable to function with two outs 
+APP: $APP
+     $SOURCES\duplicate-outs
+STDOUT: duplicate-outs-$FUNCTION.txt
+
+[04]
+NAME: Factorial iterative
+APP: $APP
+     $SOURCES\factorial-iterative
+STDOUT: factorial-iterative-$FUNCTION.txt
+
+[05]
+NAME: Factorial recursive
+APP: $APP
+     $SOURCES\factorial-recursive
+STDOUT: factorial-recursive-$FUNCTION.txt
+
+[06]
+NAME: While loop with syntactically wrong body
+APP: $APP
+     $SOURCES\while-wrong-body-1
+STDOUT: while-wrong-body-1-$FUNCTION.txt
