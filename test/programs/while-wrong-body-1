@@ -1,0 +1,4 @@
+proc main(out x) {
+ // type error in loop body
+  while (x) { true }
+}

@@ -1,0 +1,7 @@
+swap(secret1, secret2; secret1, secret2);
+swap(public1, public2; public1, public2);
+
+proc swap(in x1, x2; out y1, y2) {
+  y1 = x2;
+  y2 = x1;
+}

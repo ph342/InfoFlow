@@ -1,0 +1,6 @@
+foo(x, x);
+
+proc foo(out a, b) {
+  a = 1;
+  b = a + 2;
+}
