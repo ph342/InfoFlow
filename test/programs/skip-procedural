@@ -1,0 +1,6 @@
+skip();
+
+proc skip() {
+  y1 = x2;
+  y2 = x1;
+}

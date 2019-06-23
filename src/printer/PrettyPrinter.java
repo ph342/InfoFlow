@@ -1,4 +1,4 @@
-package prettyprint;
+package printer;
 
 import java.io.PrintStream;
 import syntaxtree.*;
@@ -7,12 +7,9 @@ import java.util.Deque;
 import java.util.List;
 import java.util.LinkedList;
 
-public class PrettyPrinter implements Visitor<Void> {
+public class PrettyPrinter extends Printer {
 
-    private int indent;
-    private static final String INDENT = "  ";
     private Deque<Boolean> bracketing;
-    private PrintStream ps;
 
     /**
      * Initialise a new pretty printer.
@@ -25,57 +22,9 @@ public class PrettyPrinter implements Visitor<Void> {
      * Initialise a new pretty printer.
      */
     public PrettyPrinter(PrintStream ps) {
-        this.ps = ps;
-        indent = 0;
+    	super(ps);
         bracketing = new LinkedList<Boolean>();
         bracketing.push(false);
-    }
-
-    /**
-     * Start a new line of output.
-     */
-    private void newline() {
-        ps.println();
-    }
-
-    /**
-     * Print a string prefixed by current indent whitespace.
-     */
-    private void iprint(String s) {
-        indent();
-        ps.print(s);
-    }
-
-    /**
-     * Print a string prefixed by current indent whitespace, followed by a
-     * newline.
-     */
-    private void iprintln(String s) {
-        iprint(s);
-        newline();
-    }
-
-    /**
-     * Print a string.
-     */
-    private void print(String s) {
-        ps.print(s);
-    }
-
-    /**
-     * Print a string, followed by a newline.
-     */
-    private void println(String s) {
-        ps.println(s);
-    }
-
-    /**
-     * Print current indent of whitespace.
-     */
-    private void indent() {
-        for (int i = 0; i < indent; i++) {
-            ps.print(INDENT);
-        }
     }
 
     /**
@@ -214,7 +163,6 @@ public class PrettyPrinter implements Visitor<Void> {
     // Exp e;
     public Void visit(CmdAssign n) {
         iprint(n.v.id + " = ");
-        //iprint(n.v.id + "(" + n.v.offset + "," + n.v.isField + ")" + " = ");
         n.e.accept(this);
         println(";");
         return null;
@@ -249,7 +197,6 @@ public class PrettyPrinter implements Visitor<Void> {
     // Var v;
     public Void visit(ExpVar n) {
         print(n.v.id);
-        //print(n.v.id + "(" + n.v.offset + "," + n.v.isField + ")");
         return null;
     }
 

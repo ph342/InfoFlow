@@ -107,16 +107,7 @@ public List<Var> nt_InFormals() :
   List<Var> vs;
 }
 {
-   <IN> vs=nt_VarList() <SEMICOLON> { return vs; }
- | { return new LinkedList<Var>(); }
-}
-
-public List<Var> nt_OutActuals() :
-{
-  List<Var> vs;
-}
-{
-   vs=nt_VarList() { return vs; }
+   ( <IN> vs=nt_VarList() <SEMICOLON> { return vs; } )
  | { return new LinkedList<Var>(); }
 }
 
@@ -126,7 +117,6 @@ public List<Var> nt_OutFormals() :
 }
 {
    <OUT> vs=nt_VarList() { return vs; }
- | { return new LinkedList<Var>(); }
 }
 
 public List<Var> nt_VarList() :
@@ -176,8 +166,7 @@ public Cmd nt_Cmd() :
   | t=<ID> (
               t1=<ASSIGN> e=nt_Exp() <SEMICOLON>
               { Var v = new Var(t.image); tag(v, t); return tag(new CmdAssign(v, e), t1); }
-//            | <LPAREN> ais=nt_ExpList() aos = nt_VarList() <RPAREN> <SEMICOLON>
-            | <LPAREN> ais=nt_ExpList() aos = nt_OutActuals() <RPAREN> <SEMICOLON>
+            | <LPAREN> ais=nt_ExpList() aos = nt_VarList() <RPAREN> <SEMICOLON>
               { return tag(new CmdCall(t.image, ais, aos), t); }
            )
   | t1=<IF> <LPAREN> e=nt_Exp() <RPAREN> s1=nt_Cmd() <ELSE> s2=nt_Cmd()
