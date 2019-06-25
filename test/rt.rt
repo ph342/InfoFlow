@@ -8,46 +8,75 @@ SET: BIN: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\bi
 # Program sources directory
 SET: SOURCES: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\test\programs
 
+# Some postfix
+SET: POSTFIX: Analyse
+
 APP: $JAVA
      -cp
      $BIN
      Analyse
      -pretty
      -tree
+     -interp
+     -quiet
 
 ################################################################################################
 [01]
 NAME: Swap values of 2 variables
 APP: $APP
      $SOURCES\swap
-STDOUT: swap-$FUNCTION.txt
+STDOUT: swap-$POSTFIX.txt
 
 [02]
 NAME: Swap values of 2 variables (procedural)
 APP: $APP
      $SOURCES\swap-procedural
-STDOUT: swap-procedural-$FUNCTION.txt
+STDOUT: swap-procedural-$POSTFIX.txt
 
 [03]
-NAME: Pass same variable to function with two outs 
+NAME: Pass same variable to POSTFIX with two outs 
 APP: $APP
      $SOURCES\duplicate-outs
-STDOUT: duplicate-outs-$FUNCTION.txt
+STDOUT: duplicate-outs-$POSTFIX.txt
 
 [04]
 NAME: Factorial iterative
 APP: $APP
      $SOURCES\factorial-iterative
-STDOUT: factorial-iterative-$FUNCTION.txt
+STDOUT: factorial-iterative-$POSTFIX.txt
 
 [05]
 NAME: Factorial recursive
 APP: $APP
      $SOURCES\factorial-recursive
-STDOUT: factorial-recursive-$FUNCTION.txt
+STDOUT: factorial-recursive-$POSTFIX.txt
 
 [06]
 NAME: While loop with syntactically wrong body
 APP: $APP
      $SOURCES\while-wrong-body-1
-STDOUT: while-wrong-body-1-$FUNCTION.txt
+STDOUT: while-wrong-body-1-$POSTFIX.txt
+
+[07]
+NAME: Program that uses all tokens at least once to stress-test visitors
+APP: $APP
+     $SOURCES\full-code-coverage
+STDOUT: full-code-coverage-$POSTFIX.txt
+
+[08]
+NAME: A procedure with no in- or out-formals is equivalent to skip
+APP: $APP
+     $SOURCES\skip-procedural
+STDOUT: skip-procedural-$POSTFIX.txt
+
+[09]
+NAME: A simple program with an addition to test the interpreter
+APP: $APP
+     $SOURCES\x-plus-one
+STDOUT: x-plus-one-$POSTFIX.txt
+
+[10]
+NAME: Test how a command block influences program behaviour, e.g. scope
+APP: $APP
+     $SOURCES\cmd-block
+STDOUT: cmd-block-$POSTFIX.txt

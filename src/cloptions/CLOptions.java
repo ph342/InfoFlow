@@ -7,7 +7,7 @@ import java.util.Set;
 /**
  * Simple utility for extracting command-line options from a list of arg
  * strings.
- * 
+ *
  * @author seb
  */
 public class CLOptions {
@@ -15,7 +15,7 @@ public class CLOptions {
 	/**
 	 * Scan a list of command-line arguments and extract any recognised option
 	 * flags.
-	 * 
+	 *
 	 * @param args  the list of command-line arguments. All recognised flags will be
 	 *              removed from the list, so the list must support the remove
 	 *              operation (note that this means that the list cannot be created
@@ -51,7 +51,7 @@ public class CLOptions {
 
 	/**
 	 * Scan a list of command-line arguments without flags and extract assignments.
-	 * 
+	 *
 	 * @param args The list of command-line arguments WITHOUT the flags.
 	 * @return Assignments in the form x=5
 	 */
@@ -61,9 +61,8 @@ public class CLOptions {
 
 		String[] ret = new String[args.size() - 1];
 
-		for (int i = 0; i < ret.length; ++i) {
+		for (int i = 0; i < ret.length; ++i)
 			ret[i] = args.get(i + 1);
-		}
 
 		return ret;
 	}

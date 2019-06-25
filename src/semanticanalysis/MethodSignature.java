@@ -1,18 +1,21 @@
 package semanticanalysis;
 
+import java.util.List;
+
 import syntaxtree.ProcDecl;
+import syntaxtree.Var;
 
 /**
  * While-language method signatures.
  */
 public class MethodSignature {
 
-    public final String methodName;
-    public final int inArity, outArity; 
+	public final String methodName;
+	public final List<Var> infs, outfs;
 
-    public MethodSignature(ProcDecl pd) {
-        this.methodName = pd.id;
-        this.inArity = pd.infs.size();
-        this.outArity = pd.outfs.size();
-    }
+	public MethodSignature(ProcDecl pd) {
+		methodName = pd.id;
+		infs = pd.infs;
+		outfs = pd.outfs;
+	}
 }

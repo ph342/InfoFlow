@@ -59,16 +59,9 @@ public class Analyse {
 
 			// pretty print parsed program
 			if (pretty) {
-				reportln("\nPretty-printing parsed program...");				
+				reportln("\nPretty-printing parsed program...");
 				PrettyPrinter pp = new PrettyPrinter();
 				root.accept(pp);
-			}
-
-			// print AST
-			if (tree) {
-				reportln("\nPrinting Abstract Syntax Tree...");
-				ASTPrinter astp = new ASTPrinter();
-				root.accept(astp);
 			}
 
 			// Build symbol table
@@ -83,6 +76,13 @@ public class Analyse {
 				WellFormednessChecker wfChecker = new WellFormednessChecker(stvisit.symbolTable);
 				root.accept(wfChecker);
 				reportln("... Program is well-formed");
+			}
+
+			// print AST
+			if (tree) {
+				reportln("\nPrinting Abstract Syntax Tree...");
+				ASTPrinter astp = new ASTPrinter(stvisit.symbolTable);
+				root.accept(astp);
 			}
 
 			// Run interpreter
@@ -110,10 +110,9 @@ public class Analyse {
 			// Read program to be parsed from standard input
 			reportln("Reading from standard input");
 			return new WhileParser(System.in).nt_Program();
-		} else {
+		} else
 			// Read program to be parsed from file
 			return new WhileParser(new java.io.FileInputStream(argList.get(0))).nt_Program();
-		}
 	}
 
 	private static void reportln(String msg) {

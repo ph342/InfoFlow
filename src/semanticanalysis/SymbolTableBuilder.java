@@ -1,6 +1,7 @@
 package semanticanalysis;
 
-import syntaxtree.*;
+import syntaxtree.ProcDecl;
+import syntaxtree.Program;
 import visitor.VisitorAdapter;
 
 /**
@@ -8,26 +9,25 @@ import visitor.VisitorAdapter;
  */
 public class SymbolTableBuilder extends VisitorAdapter<Void> {
 
-    public final SymbolTable symbolTable;
+	public final SymbolTable symbolTable;
 
-    /**
-     * Initialise a new symbol table builder.
-     */
-    public SymbolTableBuilder() {
-        symbolTable = new SymbolTable();
-    }
-    
-    @Override
-    public Void visit(Program n) {
-        for (ProcDecl pd : n.pds) {
-            pd.accept(this);
-        }
-        return null;
-    }
-    
-    @Override
-    public Void visit(ProcDecl n) {
-        symbolTable.addMethod(n);
-        return null;
-    }
+	/**
+	 * Initialise a new symbol table builder.
+	 */
+	public SymbolTableBuilder() {
+		symbolTable = new SymbolTable();
+	}
+
+	@Override
+	public Void visit(Program n) {
+		for (ProcDecl pd : n.pds)
+			pd.accept(this);
+		return null;
+	}
+
+	@Override
+	public Void visit(ProcDecl n) {
+		symbolTable.addMethod(n);
+		return null;
+	}
 }
