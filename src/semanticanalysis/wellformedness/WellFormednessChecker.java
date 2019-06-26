@@ -22,9 +22,7 @@ import visitor.VisitorAdapter;
  */
 public class WellFormednessChecker extends VisitorAdapter<Void> {
 
-	private final SymbolTable symbolTable;
-
-	private final FreeVars fv = new FreeVars();
+	private final SymbolTable symbolTable; // invariance: not null
 
 	/**
 	 * Initialise a new checker.
@@ -32,7 +30,7 @@ public class WellFormednessChecker extends VisitorAdapter<Void> {
 	 * @param s the symbol table to use
 	 */
 	public WellFormednessChecker(SymbolTable s) {
-		symbolTable = s;
+		symbolTable = s == null ? new SymbolTable() : s;
 	}
 
 	@Override
@@ -44,10 +42,15 @@ public class WellFormednessChecker extends VisitorAdapter<Void> {
 		return null;
 	}
 
+	/**
+	 * Free variables and local variables are not allowed in procedure bodies,
+	 * because there is no scope in this language.
+	 */
 	@Override
 	public Void visit(ProcDecl n) {
-		if (!fv.visit(n).isEmpty())
-			throw new WellFormednessException("Method " + n.id + " contains free variables.", n.getTags());
+		if (!new FreeVars().visit(n).isEmpty())
+			throw new WellFormednessException("Method " + n.id + " contains free variables or local variables.",
+					n.getTags());
 		Set<Var> formals = new HashSet<>(n.infs);
 		formals.addAll(n.outfs);
 		if (formals.size() != (n.infs.size() + n.outfs.size()))

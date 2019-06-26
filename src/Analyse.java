@@ -90,7 +90,7 @@ public class Analyse {
 				reportln("\nInterpreting program and printing final memory store...");
 				Interpreter interp = new Interpreter(assignments);
 				root.accept(interp);
-				reportln(interp.toString());
+				reportln(interp.toString(), false);
 			}
 
 			// TODO call other analysis tools here
@@ -107,7 +107,6 @@ public class Analyse {
 	private static Program parseInputProgram(List<String> argList) throws ParseException, FileNotFoundException {
 		System.out.flush();
 		if (argList.size() == 0) {
-			// Read program to be parsed from standard input
 			reportln("Reading from standard input");
 			return new WhileParser(System.in).nt_Program();
 		} else
@@ -115,10 +114,14 @@ public class Analyse {
 			return new WhileParser(new java.io.FileInputStream(argList.get(0))).nt_Program();
 	}
 
-	private static void reportln(String msg) {
-		if (!quiet) {
+	private static void reportln(String msg, boolean silent) {
+		if (!silent) {
 			System.out.print(msg + "\n");
 			System.out.flush();
 		}
+	}
+
+	private static void reportln(String msg) {
+		reportln(msg, quiet);
 	}
 }

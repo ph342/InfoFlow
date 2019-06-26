@@ -8,11 +8,13 @@ a = 6 * 6;
 		{b = b - c; b = b - e;}
 }
 
-square(0; f);
-//square(f + 100 / 10; g);
+if (true) { if (false) f=10; else f=0; } else f=10;
+
+square(2; f);
+square(f; g);
 
 proc square(in x; out y) {
-	if(!x==0)
+	if(!(x==0))
 		y = x * x;
 	else
 		y = 0;

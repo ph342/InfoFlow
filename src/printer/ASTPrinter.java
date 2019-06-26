@@ -38,11 +38,18 @@ public class ASTPrinter extends Printer {
 	private static final String INDENT_SPACE = "   ";
 	private static final String LAST_NODE_TAG = "last";
 	private SymbolTable st; // invariance: not null
-	private boolean substituteVars; // flag: substitute formal with actual variables in procedure body
 	private Stack<String> indent; // invariance: not null
 	private Map<String, ProcDecl> procedures; // invariance: not null
-	private Map<String, Exp> formalToActualMapping; // mapping for formals to actuals of procedures (invariance: not
-													// null)
+
+	/**
+	 * Mapping of formals to actuals of procedures (invariance: not null)
+	 */
+	private Map<String, Exp> formalToActualMapping;
+
+	/**
+	 * Flag: Substitute formal with actual variables in a procedure body
+	 */
+	private boolean substituteVars;
 
 	/**
 	 * Initialise a new AST printer with stdout
@@ -251,9 +258,15 @@ public class ASTPrinter extends Printer {
 	// String id
 	@Override
 	public Void visit(Var v) {
-		if (substituteVars && formalToActualMapping.containsKey(v.id))
+		// if this variable is a formal parameter in a procedure body, it needs to be
+		// substituted by the actual expression that was passed
+		if (substituteVars && formalToActualMapping.containsKey(v.id)) {
+			// to avoid cascading replacements of actual parameters, only substitute "on the
+			// highest" level
+			substituteVars = false;
 			formalToActualMapping.get(v.id).accept(this);
-		else
+			substituteVars = true;
+		} else
 			this.iprintln(v.id);
 
 		return null;
@@ -275,60 +288,37 @@ public class ASTPrinter extends Printer {
 	// List<Var> aos;
 	@Override
 	public Void visit(CmdCall n) {
-		this.iprintln("cmd");
-		this.pushIndent(n);
 
-//		// in-actuals
-//		this.iprintln("inf");
-//		indent.push(INDENT_PIPE);
-//
-//		for (Iterator<Exp> it = n.ais.iterator(); it.hasNext();) {
-//			Exp e = it.next();
-//			if (!it.hasNext())
-//				e.tag(LAST_NODE_TAG);
-//			e.accept(this);
-//		}
-//
-//		indent.pop();
-//
-//		// out-actuals
-//		this.iprintln("outf");
-//		indent.push(INDENT_PIPE);
+		// create a mapping of formal parameters to the actual parameters
 		formalToActualMapping.clear();
 		MethodSignature ms = st.getMethodSignature(n.id);
 
-		// TODO fix expressions in parameters
-		for (int i = 0; i < n.ais.size(); ++i) {
+		for (int i = 0; i < n.ais.size(); ++i)
 			formalToActualMapping.put(ms.infs.get(i).id, n.ais.get(i));
-		}
-		for (int i = 0; i < n.aos.size(); ++i) {
-			formalToActualMapping.put(ms.outfs.get(i).id, new ExpVar(n.aos.get(i)));
-		}
 
-//		for (Iterator<Var> it = n.aos.iterator(); it.hasNext();) {
-//			Var v = it.next();
-//			if (!it.hasNext())
-//				v.tag(LAST_NODE_TAG);
-//			v.accept(this);
-//		}
-//
-//		indent.pop();
-//
-//		// body
-//		this.iprintln("body");
-//		indent.push(INDENT_SPACE);
+		for (int i = 0; i < n.aos.size(); ++i)
+			formalToActualMapping.put(ms.outfs.get(i).id, new ExpVar(n.aos.get(i)));
+
+		this.iprintln("cmd"); // print top level node
+		this.pushIndent(n);
 
 		/*
-		 * Insert the body of this procedure. The well-formedness checker ensures that
-		 * every Call has a corresponding Declaration
+		 * Insert the body of the called procedure and substitute formals with actual
+		 * expressions. The well-formedness checker ensures that every Call has a
+		 * corresponding Declaration.
 		 */
 		substituteVars = true;
-		procedures.get(n.id).cmds.forEach((p) -> p.accept(this));
-		substituteVars = false;
-		indent.pop();
 
-//		// Go up one level
-//		indent.pop();
+		for (Iterator<Cmd> it = procedures.get(n.id).cmds.iterator(); it.hasNext();) {
+			Cmd cmd = it.next();
+			if (!it.hasNext())
+				cmd.tag(LAST_NODE_TAG);
+			cmd.accept(this);
+		}
+
+		substituteVars = false;
+
+		indent.pop();
 
 		return null;
 	}
