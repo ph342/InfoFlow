@@ -6,6 +6,7 @@ import visitor.VisitorAdapter;
 
 /**
  * Abstract class for printers
+ * 
  * @author dak1
  */
 public abstract class Printer extends VisitorAdapter<Void> {
@@ -23,12 +24,12 @@ public abstract class Printer extends VisitorAdapter<Void> {
 
 	/**
 	 * Initialise a new printer
-	 * 
+	 *
 	 * @param ps Output stream
 	 */
 	public Printer(PrintStream ps) {
-        this.ps = ps;
-        indent = 0;
+		this.ps = ps;
+		indent = 0;
 	}
 
 	/**
@@ -42,7 +43,7 @@ public abstract class Printer extends VisitorAdapter<Void> {
 	 * Print a string prefixed by current indent whitespace.
 	 */
 	protected void iprint(String s) {
-		indent();
+		this.indent();
 		ps.print(s);
 	}
 
@@ -50,8 +51,8 @@ public abstract class Printer extends VisitorAdapter<Void> {
 	 * Print a string prefixed by current indent whitespace, followed by a newline.
 	 */
 	protected void iprintln(String s) {
-		iprint(s);
-		newline();
+		this.iprint(s);
+		this.newline();
 	}
 
 	/**
@@ -72,8 +73,7 @@ public abstract class Printer extends VisitorAdapter<Void> {
 	 * Print current indent of whitespace.
 	 */
 	protected void indent() {
-		for (int i = 0; i < indent; i++) {
+		for (int i = 0; i < indent; i++)
 			ps.print(INDENT);
-		}
 	}
 }

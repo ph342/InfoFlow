@@ -1,0 +1,21 @@
+a = 6 * 6;
+{
+	if(a==36) 
+		{b = 60; c = 2; square(c; d);} 
+	else 
+		{b = 45; e = 5;}
+	while(b > 10) 
+		{b = b - c; b = b - e;}
+}
+
+if (true) { if (false) f=10; else f=0; } else f=10;
+
+square(2; f);
+square(f; g);
+
+proc square(in x; out y) {
+	if(!(x==0))
+		y = x * x;
+	else
+		y = 0;
+}

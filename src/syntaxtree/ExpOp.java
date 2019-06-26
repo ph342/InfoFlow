@@ -4,25 +4,33 @@ import visitor.Visitor;
 
 public class ExpOp extends Exp {
 
-    public enum Op {
-        
-        AND("&&"), OR("||"), LESSTHAN("<"), GREATERTHAN(">"), EQUALS("=="), DIV("/"), PLUS("+"), MINUS("-"), TIMES("*");
-        
-        private final String name;
-        private Op(String name) { this.name = name; }
-        public String toString() { return name; }
-    }
+	public enum Op {
 
-    public final Exp e1, e2;
-    public final Op op;
+		AND("&&"), OR("||"), LESSTHAN("<"), GREATERTHAN(">"), EQUALS("=="), DIV("/"), PLUS("+"), MINUS("-"), TIMES("*");
 
-    public ExpOp(Exp ae1, Op op, Exp ae2) {
-        e1 = ae1;
-        this.op = op;
-        e2 = ae2;
-    }
+		private final String name;
 
-    public <T> T accept(Visitor<T> v) {
-        return v.visit(this);
-    }
+		private Op(String name) {
+			this.name = name;
+		}
+
+		@Override
+		public String toString() {
+			return name;
+		}
+	}
+
+	public final Exp e1, e2;
+	public final Op op;
+
+	public ExpOp(Exp ae1, Op op, Exp ae2) {
+		e1 = ae1;
+		this.op = op;
+		e2 = ae2;
+	}
+
+	@Override
+	public <T> T accept(Visitor<T> v) {
+		return v.visit(this);
+	}
 }

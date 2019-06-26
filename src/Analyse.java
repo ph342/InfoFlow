@@ -59,16 +59,9 @@ public class Analyse {
 
 			// pretty print parsed program
 			if (pretty) {
-				reportln("\nPretty-printing parsed program...");				
+				reportln("\nPretty-printing parsed program...");
 				PrettyPrinter pp = new PrettyPrinter();
 				root.accept(pp);
-			}
-
-			// print AST
-			if (tree) {
-				reportln("\nPrinting Abstract Syntax Tree...");
-				ASTPrinter astp = new ASTPrinter();
-				root.accept(astp);
 			}
 
 			// Build symbol table
@@ -85,12 +78,19 @@ public class Analyse {
 				reportln("... Program is well-formed");
 			}
 
+			// print AST
+			if (tree) {
+				reportln("\nPrinting Abstract Syntax Tree...");
+				ASTPrinter astp = new ASTPrinter(stvisit.symbolTable);
+				root.accept(astp);
+			}
+
 			// Run interpreter
 			if (interp) {
 				reportln("\nInterpreting program and printing final memory store...");
 				Interpreter interp = new Interpreter(assignments);
 				root.accept(interp);
-				reportln(interp.toString());
+				reportln(interp.toString(), false);
 			}
 
 			// TODO call other analysis tools here
@@ -107,19 +107,21 @@ public class Analyse {
 	private static Program parseInputProgram(List<String> argList) throws ParseException, FileNotFoundException {
 		System.out.flush();
 		if (argList.size() == 0) {
-			// Read program to be parsed from standard input
 			reportln("Reading from standard input");
 			return new WhileParser(System.in).nt_Program();
-		} else {
+		} else
 			// Read program to be parsed from file
 			return new WhileParser(new java.io.FileInputStream(argList.get(0))).nt_Program();
+	}
+
+	private static void reportln(String msg, boolean silent) {
+		if (!silent) {
+			System.out.print(msg + "\n");
+			System.out.flush();
 		}
 	}
 
 	private static void reportln(String msg) {
-		if (!quiet) {
-			System.out.print(msg + "\n");
-			System.out.flush();
-		}
+		reportln(msg, quiet);
 	}
 }
