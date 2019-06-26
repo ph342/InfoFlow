@@ -12,6 +12,7 @@ import parser.TokenMgrError;
 import parser.WhileParser;
 import printer.ASTPrinter;
 import printer.PrettyPrinter;
+import semanticanalysis.FreeVars;
 import semanticanalysis.StaticAnalysisException;
 import semanticanalysis.SymbolTableBuilder;
 import semanticanalysis.wellformedness.WellFormednessChecker;
@@ -94,7 +95,9 @@ public class Analyse {
 			}
 
 			// TODO call other analysis tools here
+			//new FreeVars().visit(root).forEach((v) -> reportln(v.id));
 
+			
 		} catch (java.io.FileNotFoundException e) {
 			System.err.println("Unable to read input file. " + e.getMessage());
 		} catch (ParseException | TokenMgrError e) {

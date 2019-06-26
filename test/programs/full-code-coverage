@@ -8,7 +8,7 @@ a = 6 * 6;
 		{b = b - c; b = b - e;}
 }
 
-if (true) { if (false) f=10; else f=0; } else f=10;
+if (true) { if (h==false) f=10; else f=0; } else f=10;
 
 square(2; f);
 square(f; g);
