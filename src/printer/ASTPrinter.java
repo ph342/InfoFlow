@@ -42,7 +42,7 @@ public class ASTPrinter extends Printer {
 	private Map<String, ProcDecl> procedures; // invariance: not null
 
 	/**
-	 * Mapping of formals to actuals of procedures (invariance: not null)
+	 * Mapping of formals to actuals (invariance: not null)
 	 */
 	private Map<String, Exp> formalToActualMapping;
 
