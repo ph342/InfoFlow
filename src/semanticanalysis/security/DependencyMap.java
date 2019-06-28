@@ -34,7 +34,7 @@ public final class DependencyMap {
 
 	/**
 	 * Creates a dependency map equivalent to the identity function. Complexity
-	 * O(2v)
+	 * O(v)
 	 * 
 	 * @param vars All variables
 	 */
@@ -135,12 +135,36 @@ public final class DependencyMap {
 	public DependencyMap closure() {
 		boolean[][] m = new boolean[matrix[0].length][matrix[1].length];
 
+//		for (int i = 0; i < matrix[0].length; ++i) // deep copy
+//			for (int j = 0; j < matrix[1].length; ++j)
+//				m[i][j] = matrix[i][j];
+		// TODO deep copy 
+
 		for (int i = 0; i < matrix[0].length; ++i)
 			for (int j = 0; j < matrix[0].length; ++j)
-				for (int k = 0; k < matrix[0].length; k++)
-					m[j][k] = m[j][k] || (matrix[j][i] && matrix[i][k]);
+				for (int k = 0; k < matrix[0].length; ++k)
+					m[j][k] = matrix[j][k] || (matrix[j][i] && matrix[i][k]);
 
 		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		DependencyMap other = (DependencyMap) obj;
+		if (indexMap == null) {
+			if (other.indexMap != null)
+				return false;
+		} else if (!indexMap.equals(other.indexMap))
+			return false;
+		if (!Arrays.deepEquals(matrix, other.matrix))
+			return false;
+		return true;
 	}
 
 	@Override
