@@ -15,6 +15,7 @@ import printer.PrettyPrinter;
 import semanticanalysis.FreeVars;
 import semanticanalysis.StaticAnalysisException;
 import semanticanalysis.SymbolTableBuilder;
+import semanticanalysis.security.SecurityTypeSystem;
 import semanticanalysis.wellformedness.WellFormednessChecker;
 import syntaxtree.Program;
 
@@ -23,7 +24,7 @@ import syntaxtree.Program;
  */
 public class Analyse {
 
-	private static boolean pretty = false, wf = true, quiet = false, tree = false, interp = false;
+	private static boolean pretty = false, wf = true, quiet = false, tree = false, interp = false, security = false;;
 
 	/**
 	 * Analyse a While-program.
@@ -37,19 +38,21 @@ public class Analyse {
 	 *             <li>-quiet (suppress progress messages)
 	 *             <li>-tree (print AST)
 	 *             <li>-interp (execute program and observe mem store)
+	 *             <li>-sec (execute security type system checks)
 	 *             </ul>
 	 */
 	public static void main(String[] args) {
 
 		// fetch arguments
 		List<String> argList = new ArrayList<>(Arrays.asList(args));
-		Set<String> options = CLOptions.getFlags(argList, "nowf", "pretty", "quiet", "tree", "interp");
+		Set<String> options = CLOptions.getFlags(argList, "nowf", "pretty", "quiet", "tree", "interp", "sec");
 		String[] assignments = CLOptions.getAssignments(argList);
 		pretty = options.contains("pretty");
 		quiet = options.contains("quiet");
 		wf = !options.contains("nowf");
 		tree = options.contains("tree");
 		interp = options.contains("interp");
+		security = options.contains("sec");
 
 		Program root;
 		try {
@@ -94,12 +97,15 @@ public class Analyse {
 				reportln(interp.toString(), false);
 			}
 
-			// TODO call other analysis tools here
-			//new FreeVars().visit(root).forEach((v) -> reportln(v.id));
+			// Security type checking
+			if (security) {
+				reportln("\nEstablishing dependency map for security checks...");
+				SecurityTypeSystem sec = new SecurityTypeSystem(root.accept(new FreeVars()));
+				reportln(root.accept(sec).toString(), false);
+			}
 
-			
 		} catch (java.io.FileNotFoundException e) {
-			System.err.println("Unable to read input file. " + e.getMessage());
+			System.err.println("\nUnable to read input file. " + e.getMessage());
 		} catch (ParseException | TokenMgrError e) {
 			System.err.println("\nSyntax error: " + e.getMessage());
 		} catch (StaticAnalysisException e) {

@@ -63,7 +63,8 @@ class MatrixOperations {
 		expectedMatrix[2][1] = true;
 		DependencyMap expected = new DependencyMap(expectedMatrix, hm);
 
-		DependencyMap actual = A.update(new Var("b"), hashSet); // Test
+		DependencyMap actual = A.addDependencies(new Var("b"), hashSet); // Test
+		
 		assertEquals(expected, actual);
 	}
 

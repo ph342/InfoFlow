@@ -1,0 +1,6 @@
+tmp = secret1; 
+secret1 = secret2; 
+secret2 = tmp; 
+tmp = public1; 
+public1 = public2; 
+public2 = tmp;
