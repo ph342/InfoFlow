@@ -85,8 +85,7 @@ public class Analyse {
 			// print AST
 			if (tree) {
 				reportln("\nPrinting Abstract Syntax Tree...");
-				ASTPrinter astp = new ASTPrinter(stvisit.symbolTable);
-				root.accept(astp);
+				root.accept(new ASTPrinter());
 			}
 
 			// Run interpreter

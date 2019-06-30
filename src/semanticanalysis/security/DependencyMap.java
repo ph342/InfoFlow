@@ -11,41 +11,39 @@ import java.util.Stack;
 import syntaxtree.Var;
 
 /**
- * Immutable function to map variables to a subset of the powerset of all
+ * Immutable object to map variables to a subset of the powerset of all
  * variables. "The semantic content of Delta can be understood as a set of
  * dependencies." (p.7)
  * 
  * @author dak1
- */
-/**
- * @author dak1
- *
- */
-/**
- * @author dak1
- *
  */
 public final class DependencyMap {
 
 	/**
 	 * Row-major matrix [row][column]
 	 */
-	private final boolean[][] matrix;
+	private final boolean[][] matrix; // TODO define invariance
 
 	/**
 	 * Maps variables to row/column indexes
 	 */
-	private final HashMap<String, Integer> indexMap;
-	private static final int PC_INDEX = 0; // program counter
-	private static final int T_INDEX = 1; // termination variable
+	private final HashMap<String, Integer> varMap;
 
-	public DependencyMap(boolean[][] matrix, HashMap<String, Integer> indexMap) {
+	// program variables cannot have a name starting with an underscore
+	public static final String PC = "_pc"; // program counter
+	public static final String T = "_t"; // termination variable
+
+	/**
+	 * Parameterised constructor.
+	 */
+	public DependencyMap(boolean[][] matrix, HashMap<String, Integer> varMap) {
 		this.matrix = matrix;
-		this.indexMap = indexMap;
+		this.varMap = varMap;
 	}
 
 	/**
-	 * Creates a dependency map equivalent to the identity function. Complexity O(v)
+	 * Constructor to create a dependency map equivalent to the identity function.
+	 * Complexity O(v)
 	 * 
 	 * @param vars All variables
 	 */
@@ -55,14 +53,16 @@ public final class DependencyMap {
 
 		// elements are automatically initialised to false, + 2 for pc and t
 		matrix = new boolean[vars.size() + 2][vars.size() + 2];
+		varMap = new HashMap<String, Integer>(vars.size() + 2);
 
-		indexMap = new HashMap<String, Integer>(vars.size());
+		// the program counter is at index 0, the termination variable at index 1
+		varMap.put(PC, 0);
+		varMap.put(T, 1);
 
 		// assign variables to indexes
-		// the program counter is at index 0, the termination variable at index 1
 		int idx = 2;
 		for (Iterator<Var> i = vars.iterator(); i.hasNext(); ++idx)
-			indexMap.put(i.next().id, idx);
+			varMap.put(i.next().id, idx);
 
 		/*
 		 * Initially all variables are only dependent on the singleton containing
@@ -76,23 +76,49 @@ public final class DependencyMap {
 	 * Copy constructor. Complexity O(v^2)
 	 */
 	public DependencyMap(DependencyMap d) {
-		this.indexMap = new HashMap<String, Integer>(d.indexMap); // shallow copy
+		this.varMap = new HashMap<String, Integer>(d.varMap); // shallow copy
 		this.matrix = deepCopy(d.matrix); // deep copy
 	}
 
 	/**
-	 * Add dependencies to a variable. Existing dependencies remain unchanged. If an
-	 * empty set or null is passed, no actions will be taken. Complexity O(v^2)
+	 * Get the dependencies of a given variable.
 	 * 
-	 * @param v    Variable
-	 * @param vars Dependent variables or nothing
+	 * @param v Variable
+	 * @return Dependent variables or empty set
+	 */
+	public Set<Var> getDependencies(Var v) {
+		if (v == null)
+			return new HashSet<>();
+		HashSet<Var> result = new HashSet<>();
+
+		for (int col = 0; col < matrix.length; ++col) {
+			if (!matrix[varMap.get(v.id)][col])
+				continue;
+
+			// Find variable name and add
+			for (Iterator<Entry<String, Integer>> it = varMap.entrySet().iterator(); it.hasNext();) {
+				Entry<String, Integer> entry = it.next();
+				if (entry.getValue() == col)
+					result.add(new Var(entry.getKey()));
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Add dependencies to a variable or the program counter. Existing dependencies
+	 * remain unchanged. If an empty set or null is passed, no actions will be
+	 * taken. Complexity O(v^2)
+	 * 
+	 * @param v    Variable or program counter
+	 * @param vars Dependent variables (including pc) or nothing
 	 */
 	public DependencyMap addDependencies(Var v, Set<Var> vars) {
 		if (vars == null || vars.size() == 0)
 			return this;
 
 		boolean[][] m = new boolean[matrix.length][matrix.length];
-		int row = indexMap.get(v.id);
+		int row = varMap.get(v.id);
 
 		for (int i = 0; i < matrix.length; ++i) {
 			for (int col = 0; col < matrix.length; ++col)
@@ -101,72 +127,22 @@ public final class DependencyMap {
 			if (i == row)
 				// set every dependent variable to true
 				vars.forEach((dependentVar) -> {
-					m[row][indexMap.get(dependentVar.id)] = true;
+					m[row][varMap.get(dependentVar.id)] = true;
 				});
 		}
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	/**
-	 * Add dependencies to the program counter. Existing dependencies remain
-	 * unchanged. If an empty set or null is passed, no actions will be taken.
-	 * Complexity O(v^2)
-	 * 
-	 * @param vars Dependent variables or nothing
-	 */
-	public DependencyMap addDependencies(Set<Var> vars) {
-		if (vars == null || vars.size() == 0)
-			return this;
-
-		boolean[][] m = new boolean[matrix.length][matrix.length];
-
-		for (int i = 0; i < matrix.length; ++i) {
-			for (int col = 0; col < matrix.length; ++col)
-				m[i][col] = matrix[i][col];
-
-			if (i == PC_INDEX)
-				// program counter is in row 0
-				// set every dependent variable to true
-				vars.forEach((dependentVar) -> {
-					m[PC_INDEX][indexMap.get(dependentVar.id)] = true;
-				});
-		}
-
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
-	}
-
-	/**
-	 * Make a variable dependent on the program counter. Existing dependencies of
-	 * the variable remain unchanged. Complexity O(v^2)
-	 * 
-	 * @param v Variable that is dependent on the pc
-	 */
-	public DependencyMap addDependencies(Var v) {
-		boolean[][] m = new boolean[matrix.length][matrix.length];
-		int row = indexMap.get(v.id);
-
-		for (int i = 0; i < matrix.length; ++i) {
-			for (int col = 0; col < matrix.length; ++col)
-				m[i][col] = matrix[i][col];
-
-			if (i == row)
-				// set pc to true
-				m[i][PC_INDEX] = true;
-		}
-
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
-	}
-
-	/**
-	 * Removes dependencies of a variable, except the dependency on itself.
-	 * (Identity function for one variable) Complexity O(n^2)
+	 * Removes dependencies of a variable or the program counter, except the
+	 * dependency on itself. (Identity function for one variable) Complexity O(v^2)
 	 * 
 	 * @param v Variable to be reset
 	 */
 	public DependencyMap removeDependencies(Var v) {
 		boolean[][] m = new boolean[matrix.length][matrix.length];
-		int varRow = indexMap.get(v.id);
+		int varRow = varMap.get(v.id);
 
 		for (int row = 0; row < matrix.length; ++row) {
 			for (int col = 0; col < matrix.length; ++col)
@@ -176,43 +152,83 @@ public final class DependencyMap {
 					m[row][col] = matrix[row][col];
 		}
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	/**
-	 * Removes dependencies of the program counter, except the dependency on itself.
-	 * (Identity function for pc) Complexity O(n^2)
+	 * Removes variables from this map. If the set is empty, no actions will be
+	 * taken. Complexity O(v^2) TODO needed?
+	 * 
+	 * @param vars Variables to be deleted from this dependency map
 	 */
-	public DependencyMap removeDependencies() {
-		boolean[][] m = new boolean[matrix.length][matrix.length];
+	public DependencyMap removeVariables(Set<Var> vars) {
+		if (vars == null || vars.size() == 0)
+			return this;
+
+		// collect indexes of the new variables
+		Set<Integer> delIndex = new HashSet<Integer>();
+		HashMap<String, Integer> newVars = new HashMap<String, Integer>(varMap);
+		for (Var v : vars)
+			if (varMap.containsKey(v.id)) {
+				int indexOld = varMap.get(v.id);
+				delIndex.add(indexOld);
+				newVars.remove(v.id);
+
+				// recalculate all existing indexes
+				for (Iterator<Entry<String, Integer>> it = newVars.entrySet().iterator(); it.hasNext();) {
+					Entry<String, Integer> e = it.next();
+					if (e.getValue() > indexOld)
+						e.setValue(e.getValue() - 1);
+				}
+			}
+
+		// anything to be done?
+		if (delIndex.size() == 0)
+			return this;
+
+		// Transform NxN matrix to MxM
+		boolean[][] m = new boolean[matrix.length - delIndex.size()][matrix.length - delIndex.size()];
+		int rowNew = 0, colNew = 0;
 
 		for (int row = 0; row < matrix.length; ++row) {
-			for (int col = 0; col < matrix.length; ++col)
-				if (row == PC_INDEX)
-					m[row][col] = row == col;
-				else
-					m[row][col] = matrix[row][col];
+			// if this row is to be deleted, skip it
+			if (delIndex.contains(row))
+				continue;
+
+			// Copy this row
+			colNew = 0;
+			for (int col = 0; col < matrix.length; ++col) {
+				// if this column is to be deleted, skip it
+				if (delIndex.contains(col))
+					continue;
+
+				m[rowNew][colNew] = matrix[row][col];
+				++colNew;
+			}
+			++rowNew;
 		}
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, newVars);
 	}
 
 	/**
-	 * Add the dependencies of the program counter to record the maximum level of
-	 * data which can influence a loop condition. Complexity O(n^2)
+	 * Add the dependencies of the program counter to t to record the maximum level
+	 * of data which can influence a loop condition. Complexity O(v^2)
 	 */
 	public DependencyMap raiseTerminationLevel() {
 		boolean[][] m = new boolean[matrix.length][matrix.length];
+		int tRow = varMap.get(T);
+		int pcRow = varMap.get(PC);
 
 		for (int row = 0; row < matrix.length; ++row) {
 			for (int col = 0; col < matrix.length; ++col)
-				if (row == T_INDEX)
-					m[row][col] = m[PC_INDEX][col] || row == col;
+				if (row == tRow)
+					m[row][col] = m[pcRow][col] || row == col;
 				else
 					m[row][col] = matrix[row][col];
 		}
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	/**
@@ -227,7 +243,7 @@ public final class DependencyMap {
 			for (int j = 0; j < matrix.length; ++j)
 				m[i][j] = matrix[i][j] || d.matrix[i][j];
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	/**
@@ -242,7 +258,7 @@ public final class DependencyMap {
 				for (int k = 0; k < d.matrix.length; k++)
 					m[i][j] = m[i][j] || (matrix[i][k] && d.matrix[k][j]);
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	/**
@@ -257,7 +273,7 @@ public final class DependencyMap {
 				for (int k = 0; k < m.length; ++k)
 					m[j][k] = m[j][k] || (m[j][i] && m[i][k]);
 
-		return new DependencyMap(m, new HashMap<String, Integer>(indexMap));
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
 
 	@Override
@@ -269,10 +285,10 @@ public final class DependencyMap {
 		if (getClass() != obj.getClass())
 			return false;
 		DependencyMap other = (DependencyMap) obj;
-		if (indexMap == null) {
-			if (other.indexMap != null)
+		if (varMap == null) {
+			if (other.varMap != null)
 				return false;
-		} else if (!indexMap.equals(other.indexMap))
+		} else if (!varMap.equals(other.varMap))
 			return false;
 		if (!Arrays.deepEquals(matrix, other.matrix))
 			return false;
@@ -281,63 +297,42 @@ public final class DependencyMap {
 
 	@Override
 	public String toString() {
-		String result = "Dependencies of variables:\n";
+		Stack<String> result = new Stack<String>();
 		Stack<String> dependentVars = new Stack<String>();
 
-		// Dependencies of pc
-		result += "pc -> ";
-		for (int column = 0; column < matrix.length; ++column) {
-			if (matrix[PC_INDEX][column])
-				if (column == PC_INDEX)
-					dependentVars.push("pc");
-				else
-					for (Iterator<Entry<String, Integer>> it = indexMap.entrySet().iterator(); it.hasNext();) {
-						Entry<String, Integer> entry = it.next();
-						if (entry.getValue() == column)
-							dependentVars.push(entry.getKey());
-					}
-		}
-		result += dependentVars.toString() + "\n";
-		dependentVars.clear();
+		result.push("Dependencies of variables:\n");
 
-		// Dependencies of t
-		result += "t -> ";
-		for (int column = 0; column < matrix.length; ++column) {
-			if (matrix[T_INDEX][column])
-				if (column == PC_INDEX)
-					dependentVars.push("pc");
-				else if (column == T_INDEX)
-					dependentVars.push("t");
-				else
-					for (Iterator<Entry<String, Integer>> it = indexMap.entrySet().iterator(); it.hasNext();) {
-						Entry<String, Integer> entry = it.next();
-						if (entry.getValue() == column)
-							dependentVars.push(entry.getKey());
-					}
-		}
-		result += dependentVars.toString() + "\n";
-
-		// Dependencies of all other variables
-		for (Entry<String, Integer> e : indexMap.entrySet()) { // loop through variables
-			result += e.getKey() + " -> ";
+		// Dependencies of all variables
+		for (Entry<String, Integer> e : varMap.entrySet()) {
 			dependentVars.clear();
 
 			for (int column = 0; column < matrix.length; ++column) {
 				if (matrix[e.getValue()][column])
-					if (column == PC_INDEX)
-						dependentVars.push("pc");
-					else if (column == T_INDEX)
-						dependentVars.push("t");
-					else
-						for (Iterator<Entry<String, Integer>> it = indexMap.entrySet().iterator(); it.hasNext();) {
-							Entry<String, Integer> entry = it.next();
-							if (entry.getValue() == column)
-								dependentVars.push(entry.getKey());
-						}
+					for (Iterator<Entry<String, Integer>> it = varMap.entrySet().iterator(); it.hasNext();) {
+						Entry<String, Integer> entry = it.next();
+						if (entry.getValue() == column)
+							dependentVars.push(entry.getKey().replaceFirst("^_pc$", "pc").replaceFirst("^_t$", "t"));
+					}
 			}
-			result += dependentVars.toString() + "\n";
+			// pretty print pc and t
+			switch (e.getKey()) {
+			case PC:
+				result.insertElementAt(
+						e.getKey().replaceFirst("^_pc$", "pc") + " -> {" + dependentVars.toString() + "}\n", 1);
+				break;
+			case T:
+				result.insertElementAt(
+						e.getKey().replaceFirst("^_t$", "t") + " -> {" + dependentVars.toString() + "}\n", 2);
+				break;
+			default:
+				result.push(e.getKey() + " -> {" + dependentVars.toString() + "}\n");
+			}
 		}
-		return result;
+
+		String unformatted = "";
+		for (String s : result)
+			unformatted += s;
+		return unformatted.replace("[", "").replace("]", "");
 	}
 
 	/**

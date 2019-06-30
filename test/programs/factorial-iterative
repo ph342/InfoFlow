@@ -1,8 +1,7 @@
-fac(6; x);
+fac(6; y);
 
 proc fac(in x; out y) {
   y = 1;
-  a = 10;
   while (x > 0) {
     y = y * x;
     x = x - 1;

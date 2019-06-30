@@ -24,6 +24,8 @@ public class WellFormednessChecker extends VisitorAdapter<Void> {
 
 	private final SymbolTable symbolTable; // invariance: not null
 
+	private boolean insideProcedureBody;
+
 	/**
 	 * Initialise a new checker.
 	 *
@@ -55,8 +57,12 @@ public class WellFormednessChecker extends VisitorAdapter<Void> {
 		formals.addAll(n.outfs);
 		if (formals.size() != (n.infs.size() + n.outfs.size()))
 			throw new WellFormednessException("Duplicate formals in method signature: " + n.id, n.getTags());
+
+		insideProcedureBody = true;
 		for (Cmd s : n.cmds)
 			s.accept(this);
+		insideProcedureBody = false;
+
 		return null;
 	}
 
@@ -87,6 +93,10 @@ public class WellFormednessChecker extends VisitorAdapter<Void> {
 
 	@Override
 	public Void visit(CmdCall n) {
+		// disallow Calls inside procedure bodies
+		if (insideProcedureBody)
+			throw new WellFormednessException("Method " + n.id + " contains a procedure call.", n.getTags());
+
 		MethodSignature sig = symbolTable.getMethodSignature(n.id);
 		if (sig == null)
 			throw new WellFormednessException("Method " + n.id + " does not exist.", n.getTags());

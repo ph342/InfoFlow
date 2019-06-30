@@ -6,8 +6,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Stack;
 
-import semanticanalysis.MethodSignature;
-import semanticanalysis.SymbolTable;
 import syntaxtree.AST;
 import syntaxtree.Cmd;
 import syntaxtree.CmdAssign;
@@ -37,7 +35,6 @@ public class ASTPrinter extends Printer {
 	private static final String INDENT_PIPE = "|  ";
 	private static final String INDENT_SPACE = "   ";
 	private static final String LAST_NODE_TAG = "last";
-	private SymbolTable st; // invariance: not null
 	private Stack<String> indent; // invariance: not null
 	private Map<String, ProcDecl> procedures; // invariance: not null
 
@@ -56,8 +53,8 @@ public class ASTPrinter extends Printer {
 	 * 
 	 * @param st Symbol table
 	 */
-	public ASTPrinter(SymbolTable st) {
-		this(System.out, st);
+	public ASTPrinter() {
+		this(System.out);
 	}
 
 	/**
@@ -66,12 +63,11 @@ public class ASTPrinter extends Printer {
 	 * @param ps Output stream
 	 * @param st Symbol table
 	 */
-	public ASTPrinter(PrintStream ps, SymbolTable st) {
+	public ASTPrinter(PrintStream ps) {
 		super(ps);
 		indent = new Stack<>();
 		procedures = new HashMap<String, ProcDecl>();
 		formalToActualMapping = new HashMap<String, Exp>();
-		this.st = st == null ? new SymbolTable() : st;
 		substituteVars = false;
 	}
 
@@ -291,13 +287,13 @@ public class ASTPrinter extends Printer {
 
 		// create a mapping of formal parameters to the actual parameters
 		formalToActualMapping.clear();
-		MethodSignature ms = st.getMethodSignature(n.id);
+		ProcDecl pd = procedures.get(n.id);
 
 		for (int i = 0; i < n.ais.size(); ++i)
-			formalToActualMapping.put(ms.infs.get(i).id, n.ais.get(i));
+			formalToActualMapping.put(pd.infs.get(i).id, n.ais.get(i));
 
 		for (int i = 0; i < n.aos.size(); ++i)
-			formalToActualMapping.put(ms.outfs.get(i).id, new ExpVar(n.aos.get(i)));
+			formalToActualMapping.put(pd.outfs.get(i).id, new ExpVar(n.aos.get(i)));
 
 		this.iprintln("cmd"); // print top level node
 		this.pushIndent(n);
@@ -309,7 +305,7 @@ public class ASTPrinter extends Printer {
 		 */
 		substituteVars = true;
 
-		for (Iterator<Cmd> it = procedures.get(n.id).cmds.iterator(); it.hasNext();) {
+		for (Iterator<Cmd> it = pd.cmds.iterator(); it.hasNext();) {
 			Cmd cmd = it.next();
 			if (!it.hasNext())
 				cmd.tag(LAST_NODE_TAG);
