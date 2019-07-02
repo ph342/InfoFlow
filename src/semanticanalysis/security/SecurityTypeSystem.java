@@ -2,7 +2,6 @@ package semanticanalysis.security;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -13,7 +12,6 @@ import syntaxtree.CmdBlock;
 import syntaxtree.CmdCall;
 import syntaxtree.CmdIf;
 import syntaxtree.CmdWhile;
-import syntaxtree.Exp;
 import syntaxtree.ProcDecl;
 import syntaxtree.Program;
 import syntaxtree.Var;
@@ -112,7 +110,7 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		DependencyMap dep = new DependencyMap(allVariables);
 
 		Set<Var> dependencies = n.e.accept(new FreeVars());
-		dependencies.add(new Var(DependencyMap.PC));
+		dependencies.add(new Var(DependencyMap.PC)); // add pc
 
 		dep = dep.addDependencies(n.v, dependencies);
 		return dep; // TODO oneliner possible in a lot of methods
@@ -134,10 +132,6 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 	@Override
 	public DependencyMap visit(CmdCall n) {
 		ProcDecl proc = allProcedures.get(n.id); // cannot fail because of well-formedness
-		// TODO ...
-		// Set of all formals
-		HashSet<Var> allFormals = new HashSet<Var>(proc.outfs);
-		allFormals.addAll(proc.infs);
 
 		// Mapping of all formals to their placeholders
 		HashMap<Var, Var> formalsToPlaceholders = new HashMap<>();
@@ -145,15 +139,17 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		// Set of all placeholders
 		HashSet<Var> allPlaceholders = new HashSet<>();
 
-		// Set of all placeholders and all actuals
-		HashSet<Var> placeholderFormalsAndActuals = new HashSet<>();
+		// Set of all placeholders and all variables
+		HashSet<Var> allVariablesAndPlaceholders = new HashSet<>();
 
-		DependencyMap deltaIn;
-		DependencyMap deltaOut;
-		DependencyMap delta; // cannot use placeholder
-		DependencyMap deltaWithPlaceholder;
-		DependencyMap finalDepWithPlaceholders; // composition
-		DependencyMap finalDep;
+		// Set of all formals
+		HashSet<Var> allFormals = new HashSet<Var>(proc.outfs);
+		allFormals.addAll(proc.infs);
+
+		DependencyMap inputDependencies; // placeholders -> actuals
+		DependencyMap outputDependencies; // actuals -> placeholders
+		DependencyMap bodyDependencies; // placeholders -> placeholders, contains actuals
+		DependencyMap finalWithPlaceholders; // composition
 
 		/*
 		 * Well-formedness ensures that formals are unique, but not that the names are
@@ -167,87 +163,68 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 			++counter;
 		}
 
-		placeholderFormalsAndActuals.addAll(allPlaceholders);
-		placeholderFormalsAndActuals.addAll(n.aos);
-		for (Exp act : n.ais)
-			placeholderFormalsAndActuals.addAll(act.accept(new FreeVars()));
+		allVariablesAndPlaceholders.addAll(allPlaceholders);
+		allVariablesAndPlaceholders.addAll(allVariables);
 
-		// ∆in: formal ins -> fv(E) der actual ins
-		deltaIn = new DependencyMap(placeholderFormalsAndActuals);
+		// Formal ins -> fv(actual ins)
+		inputDependencies = new DependencyMap(allVariablesAndPlaceholders);
 
 		for (int i = 0; i < n.ais.size(); ++i)
-			deltaIn = deltaIn.addDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
+			inputDependencies = inputDependencies.addDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
 					n.ais.get(i).accept(new FreeVars()));
 
-		// ∆out: actual outs -> formal outs + pc
-		deltaOut = new DependencyMap(placeholderFormalsAndActuals);
+		// Actual outs -> formal outs + pc
+		outputDependencies = new DependencyMap(allVariablesAndPlaceholders);
 
 		for (int i = 0; i < n.aos.size(); ++i) {
 			Set<Var> outDependencies = new HashSet<>();
 			outDependencies.add(formalsToPlaceholders.get(proc.outfs.get(i)));
 			outDependencies.add(new Var(DependencyMap.PC)); // pc is a dependency
 
-			deltaOut = deltaOut.addDependencies(n.aos.get(i), outDependencies);
+			outputDependencies = outputDependencies.addDependencies(n.aos.get(i), outDependencies);
 		}
+
+		bodyDependencies = calculateProcBodyDependencies(proc, formalsToPlaceholders, allVariablesAndPlaceholders,
+				allPlaceholders);
+
+		// Type composition of this procedure call
+		finalWithPlaceholders = outputDependencies.composition(bodyDependencies).composition(inputDependencies);
+
+		// Remove placeholders from the mapping, since formals are no longer needed
+		return finalWithPlaceholders.removeVariables(allPlaceholders);
+	}
+
+	/**
+	 * Calculates the dependencies of a procedure body and substitutes formals with
+	 * placeholders afterwards.
+	 * 
+	 * @return Dependencies with all program variables, and placeholders instead of
+	 *         formals.
+	 */
+	private DependencyMap calculateProcBodyDependencies(ProcDecl proc, HashMap<Var, Var> formalsToPlaceholders,
+			HashSet<Var> allVariablesAndPlaceholders, HashSet<Var> allPlaceholders) {
 
 		// Temporarily replace the set of program variables with the set of formals
 		Set<Var> originalVars = allVariables;
-		allVariables = allFormals;
+		allVariables = formalsToPlaceholders.keySet(); // the key set is equivalent to all formals
 
 		// Generate the dependencies for the procedure body
-		delta = new DependencyMap(allFormals);
+		DependencyMap bodyDependencies = new DependencyMap(formalsToPlaceholders.keySet());
 
 		for (Cmd cmd : proc.cmds)
-			delta = cmd.accept(this).composition(delta);
+			bodyDependencies = cmd.accept(this).composition(bodyDependencies);
 
 		allVariables = originalVars;
 
-		deltaWithPlaceholder = new DependencyMap(placeholderFormalsAndActuals);
+		// Delta now: formals -> formals, without program variables
+		// needed: placeholders -> placeholders and all program variables
+		DependencyMap bodyDependenciesWithPlaceholders = new DependencyMap(allVariablesAndPlaceholders);
+		bodyDependencies = bodyDependencies.replaceVariables(formalsToPlaceholders);
 
-		// Delta now: formals -> formals + pc
-		// needed: placeholders -> placeholders
-		for (Var formal : allFormals) {
-			Set<Var> dependencies = delta.getDependencies(formal);
-			Set<Var> dependenciesPlaceholders = new HashSet<>();
+		for (Var ph : allPlaceholders)
+			bodyDependenciesWithPlaceholders = bodyDependenciesWithPlaceholders.addDependencies(ph,
+					bodyDependencies.getDependencies(ph));
 
-			// replace formal variables with placeholders
-			for (Iterator<Var> it = dependencies.iterator(); it.hasNext();) {
-				Var dep = it.next();
-
-				if (formalsToPlaceholders.containsKey(dep))
-					dependenciesPlaceholders.add(formalsToPlaceholders.get(dep));
-				else
-					dependenciesPlaceholders.add(dep); // pc doesn't have a placeholder
-
-				it.remove(); // no auxiliary space needed
-			}
-
-			deltaWithPlaceholder = deltaWithPlaceholder.addDependencies(formalsToPlaceholders.get(formal),
-					dependenciesPlaceholders);
-		}
-
-		// Type composition of this procedure call
-		finalDepWithPlaceholders = deltaOut.composition(deltaWithPlaceholder).composition(deltaIn);
-
-		// replace out-formal-placeholders in this map
-		// finalDep: actual outs -> placeholders,
-		// placeholders -> actual ins,
-		// actual -> actual
-		// needed: all vars
-		finalDep = new DependencyMap(allVariables);
-
-		for (Var act : n.aos) {
-			Set<Var> dependencies = finalDepWithPlaceholders.getDependencies(act);
-			Set<Var> dependenciesNoPlaceholders = new HashSet<>();
-
-			for (Iterator<Var> it = dependencies.iterator(); it.hasNext();) {
-				Var dep = it.next();
-				if (!allPlaceholders.contains(dep))
-					dependenciesNoPlaceholders.add(dep);
-
-				finalDep = finalDep.addDependencies(act, dependenciesNoPlaceholders);
-			}
-		}
-		return finalDep;
+		return bodyDependenciesWithPlaceholders;
 	}
 }

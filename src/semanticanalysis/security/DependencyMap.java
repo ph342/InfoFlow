@@ -20,12 +20,21 @@ import syntaxtree.Var;
 public final class DependencyMap {
 
 	/**
-	 * Row-major matrix [row][column]
+	 * Row-major matrix [row][column]. Invariance:
+	 * <ul>
+	 * <li>Not null
+	 * <li>NxN dimensions
+	 * <li>At least two rows/cols for pc and t
+	 * </ul>
 	 */
-	private final boolean[][] matrix; // TODO define invariance
+	private final boolean[][] matrix;
 
 	/**
-	 * Maps variables to row/column indexes
+	 * Maps variables to row/column indexes. Invariance:
+	 * <ul>
+	 * <li>Not null
+	 * <li>At least two elements for pc and t
+	 * </ul>
 	 */
 	private final HashMap<String, Integer> varMap;
 
@@ -73,21 +82,13 @@ public final class DependencyMap {
 	}
 
 	/**
-	 * Copy constructor. Complexity O(v^2)
-	 */
-	public DependencyMap(DependencyMap d) {
-		this.varMap = new HashMap<String, Integer>(d.varMap); // shallow copy
-		this.matrix = deepCopy(d.matrix); // deep copy
-	}
-
-	/**
 	 * Get the dependencies of a given variable.
 	 * 
 	 * @param v Variable
 	 * @return Dependent variables or empty set
 	 */
 	public Set<Var> getDependencies(Var v) {
-		if (v == null)
+		if (v == null || !varMap.containsKey(v.id))
 			return new HashSet<>();
 		HashSet<Var> result = new HashSet<>();
 
@@ -114,7 +115,7 @@ public final class DependencyMap {
 	 * @param vars Dependent variables (including pc) or nothing
 	 */
 	public DependencyMap addDependencies(Var v, Set<Var> vars) {
-		if (vars == null || vars.size() == 0)
+		if (v == null || vars == null || vars.size() == 0 || !varMap.containsKey(v.id))
 			return this;
 
 		boolean[][] m = new boolean[matrix.length][matrix.length];
@@ -125,9 +126,10 @@ public final class DependencyMap {
 				m[i][col] = matrix[i][col];
 
 			if (i == row)
-				// set every dependent variable to true
+				// set every dependent variable to true, if it exists
 				vars.forEach((dependentVar) -> {
-					m[row][varMap.get(dependentVar.id)] = true;
+					if (varMap.containsKey(dependentVar.id))
+						m[row][varMap.get(dependentVar.id)] = true;
 				});
 		}
 
@@ -141,6 +143,9 @@ public final class DependencyMap {
 	 * @param v Variable to be reset
 	 */
 	public DependencyMap removeDependencies(Var v) {
+		if (v == null || !varMap.containsKey(v.id))
+			return this;
+
 		boolean[][] m = new boolean[matrix.length][matrix.length];
 		int varRow = varMap.get(v.id);
 
@@ -157,7 +162,7 @@ public final class DependencyMap {
 
 	/**
 	 * Removes variables from this map. If the set is empty, no actions will be
-	 * taken. Complexity O(v^2) TODO needed?
+	 * taken. Complexity O(v^2)
 	 * 
 	 * @param vars Variables to be deleted from this dependency map
 	 */
@@ -168,19 +173,20 @@ public final class DependencyMap {
 		// collect indexes of the new variables
 		Set<Integer> delIndex = new HashSet<Integer>();
 		HashMap<String, Integer> newVars = new HashMap<String, Integer>(varMap);
-		for (Var v : vars)
-			if (varMap.containsKey(v.id)) {
-				int indexOld = varMap.get(v.id);
-				delIndex.add(indexOld);
-				newVars.remove(v.id);
+		for (Var v : vars) {
+			if (!varMap.containsKey(v.id))
+				continue;
+			int indexOld = newVars.get(v.id);
+			delIndex.add(varMap.get(v.id));
+			newVars.remove(v.id);
 
-				// recalculate all existing indexes
-				for (Iterator<Entry<String, Integer>> it = newVars.entrySet().iterator(); it.hasNext();) {
-					Entry<String, Integer> e = it.next();
-					if (e.getValue() > indexOld)
-						e.setValue(e.getValue() - 1);
-				}
+			// recalculate all existing indexes
+			for (Iterator<Entry<String, Integer>> it = newVars.entrySet().iterator(); it.hasNext();) {
+				Entry<String, Integer> e = it.next();
+				if (e.getValue() > indexOld)
+					e.setValue(e.getValue() - 1);
 			}
+		}
 
 		// anything to be done?
 		if (delIndex.size() == 0)
@@ -209,6 +215,27 @@ public final class DependencyMap {
 		}
 
 		return new DependencyMap(m, newVars);
+	}
+
+	/**
+	 * Returns a DependencyMap with translated variables. Complexity O(v)
+	 * 
+	 * @param mapping Old variables -> new variables
+	 */
+	public DependencyMap replaceVariables(HashMap<Var, Var> mapping) {
+		if (mapping == null || mapping.size() == 0)
+			return this;
+
+		HashMap<String, Integer> newVars = new HashMap<>(varMap);
+
+		for (Iterator<Entry<Var, Var>> it = mapping.entrySet().iterator(); it.hasNext();) {
+			Entry<Var, Var> e = it.next();
+			if (varMap.containsKey(e.getKey().id)) {
+				newVars.put(e.getValue().id, newVars.get(e.getKey().id)); // put new
+				newVars.remove(e.getKey().id); // delete old
+			}
+		}
+		return new DependencyMap(matrix, newVars);
 	}
 
 	/**
@@ -255,7 +282,7 @@ public final class DependencyMap {
 		// matrix multiplication with boolean arithmetics
 		for (int i = 0; i < matrix.length; ++i)
 			for (int j = 0; j < matrix.length; ++j)
-				for (int k = 0; k < d.matrix.length; k++)
+				for (int k = 0; k < matrix.length; k++)
 					m[i][j] = m[i][j] || (matrix[i][k] && d.matrix[k][j]);
 
 		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
@@ -311,18 +338,19 @@ public final class DependencyMap {
 					for (Iterator<Entry<String, Integer>> it = varMap.entrySet().iterator(); it.hasNext();) {
 						Entry<String, Integer> entry = it.next();
 						if (entry.getValue() == column)
-							dependentVars.push(entry.getKey().replaceFirst("^_pc$", "pc").replaceFirst("^_t$", "t"));
+							dependentVars.push(
+									entry.getKey().replaceFirst("^" + PC + "$", "pc").replaceFirst("^" + T + "$", "t"));
 					}
 			}
 			// pretty print pc and t
 			switch (e.getKey()) {
 			case PC:
 				result.insertElementAt(
-						e.getKey().replaceFirst("^_pc$", "pc") + " -> {" + dependentVars.toString() + "}\n", 1);
+						e.getKey().replaceFirst("^" + PC + "$", "pc") + " -> {" + dependentVars.toString() + "}\n", 1);
 				break;
 			case T:
 				result.insertElementAt(
-						e.getKey().replaceFirst("^_t$", "t") + " -> {" + dependentVars.toString() + "}\n", 2);
+						e.getKey().replaceFirst("^" + T + "$", "t") + " -> {" + dependentVars.toString() + "}\n", 2);
 				break;
 			default:
 				result.push(e.getKey() + " -> {" + dependentVars.toString() + "}\n");

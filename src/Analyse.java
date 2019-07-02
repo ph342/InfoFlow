@@ -24,7 +24,7 @@ import syntaxtree.Program;
  */
 public class Analyse {
 
-	private static boolean pretty = false, wf = true, quiet = false, tree = false, interp = false, security = false;;
+	private static boolean pretty = false, quiet = false, tree = false, interp = false, security = false;;
 
 	/**
 	 * Analyse a While-program.
@@ -33,7 +33,6 @@ public class Analyse {
 	 *             <p>
 	 *             options:
 	 *             <ul>
-	 *             <li>-nowf (disable well-formedness checking)
 	 *             <li>-pretty (pretty-print parsed input)
 	 *             <li>-quiet (suppress progress messages)
 	 *             <li>-tree (print AST)
@@ -44,15 +43,8 @@ public class Analyse {
 	public static void main(String[] args) {
 
 		// fetch arguments
-		List<String> argList = new ArrayList<>(Arrays.asList(args));
-		Set<String> options = CLOptions.getFlags(argList, "nowf", "pretty", "quiet", "tree", "interp", "sec");
+		List<String> argList = initArguments(args);
 		String[] assignments = CLOptions.getAssignments(argList);
-		pretty = options.contains("pretty");
-		quiet = options.contains("quiet");
-		wf = !options.contains("nowf");
-		tree = options.contains("tree");
-		interp = options.contains("interp");
-		security = options.contains("sec");
 
 		Program root;
 		try {
@@ -75,12 +67,10 @@ public class Analyse {
 			reportln("...symbol table successfully built.");
 
 			// Well-formedness check, i.e. semantic checks
-			if (wf) {
-				reportln("\nChecking well-formedness conditions...");
-				WellFormednessChecker wfChecker = new WellFormednessChecker(stvisit.symbolTable);
-				root.accept(wfChecker);
-				reportln("... Program is well-formed");
-			}
+			reportln("\nChecking well-formedness conditions...");
+			WellFormednessChecker wfChecker = new WellFormednessChecker(stvisit.symbolTable);
+			root.accept(wfChecker);
+			reportln("... Program is well-formed");
 
 			// print AST
 			if (tree) {
@@ -112,6 +102,17 @@ public class Analyse {
 		}
 	}
 
+	private static List<String> initArguments(String[] args) {
+		List<String> argList = new ArrayList<>(Arrays.asList(args));
+		Set<String> options = CLOptions.getFlags(argList, "pretty", "quiet", "tree", "interp", "sec");
+		pretty = options.contains("pretty");
+		quiet = options.contains("quiet");
+		tree = options.contains("tree");
+		interp = options.contains("interp");
+		security = options.contains("sec");
+		return argList;
+	}
+
 	private static Program parseInputProgram(List<String> argList) throws ParseException, FileNotFoundException {
 		System.out.flush();
 		if (argList.size() == 0) {
@@ -123,10 +124,9 @@ public class Analyse {
 	}
 
 	private static void reportln(String msg, boolean silent) {
-		if (!silent) {
+		if (!silent)
 			System.out.print(msg + "\n");
-			System.out.flush();
-		}
+		System.out.flush();
 	}
 
 	private static void reportln(String msg) {
