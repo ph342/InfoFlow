@@ -12,8 +12,10 @@ import parser.TokenMgrError;
 import parser.WhileParser;
 import printer.ASTPrinter;
 import printer.PrettyPrinter;
+import semanticanalysis.FreeVars;
 import semanticanalysis.StaticAnalysisException;
 import semanticanalysis.SymbolTableBuilder;
+import semanticanalysis.security.SecurityTypeSystem;
 import semanticanalysis.wellformedness.WellFormednessChecker;
 import syntaxtree.Program;
 
@@ -22,7 +24,7 @@ import syntaxtree.Program;
  */
 public class Analyse {
 
-	private static boolean pretty = false, wf = true, quiet = false, tree = false, interp = false;
+	private static boolean pretty = false, quiet = false, tree = false, interp = false, security = false;;
 
 	/**
 	 * Analyse a While-program.
@@ -31,24 +33,18 @@ public class Analyse {
 	 *             <p>
 	 *             options:
 	 *             <ul>
-	 *             <li>-nowf (disable well-formedness checking)
 	 *             <li>-pretty (pretty-print parsed input)
 	 *             <li>-quiet (suppress progress messages)
 	 *             <li>-tree (print AST)
 	 *             <li>-interp (execute program and observe mem store)
+	 *             <li>-sec (execute security type system checks)
 	 *             </ul>
 	 */
 	public static void main(String[] args) {
 
 		// fetch arguments
-		List<String> argList = new ArrayList<>(Arrays.asList(args));
-		Set<String> options = CLOptions.getFlags(argList, "nowf", "pretty", "quiet", "tree", "interp");
+		List<String> argList = initArguments(args);
 		String[] assignments = CLOptions.getAssignments(argList);
-		pretty = options.contains("pretty");
-		quiet = options.contains("quiet");
-		wf = !options.contains("nowf");
-		tree = options.contains("tree");
-		interp = options.contains("interp");
 
 		Program root;
 		try {
@@ -71,18 +67,15 @@ public class Analyse {
 			reportln("...symbol table successfully built.");
 
 			// Well-formedness check, i.e. semantic checks
-			if (wf) {
-				reportln("\nChecking well-formedness conditions...");
-				WellFormednessChecker wfChecker = new WellFormednessChecker(stvisit.symbolTable);
-				root.accept(wfChecker);
-				reportln("... Program is well-formed");
-			}
+			reportln("\nChecking well-formedness conditions...");
+			WellFormednessChecker wfChecker = new WellFormednessChecker(stvisit.symbolTable);
+			root.accept(wfChecker);
+			reportln("... Program is well-formed");
 
 			// print AST
 			if (tree) {
 				reportln("\nPrinting Abstract Syntax Tree...");
-				ASTPrinter astp = new ASTPrinter(stvisit.symbolTable);
-				root.accept(astp);
+				root.accept(new ASTPrinter());
 			}
 
 			// Run interpreter
@@ -93,15 +86,31 @@ public class Analyse {
 				reportln(interp.toString(), false);
 			}
 
-			// TODO call other analysis tools here
+			// Security type checking
+			if (security) {
+				reportln("\nEstablishing dependency map for security checks...");
+				SecurityTypeSystem sec = new SecurityTypeSystem(root.accept(new FreeVars()));
+				reportln(root.accept(sec).toString(), false);
+			}
 
 		} catch (java.io.FileNotFoundException e) {
-			System.err.println("Unable to read input file. " + e.getMessage());
+			System.err.println("\nUnable to read input file. " + e.getMessage());
 		} catch (ParseException | TokenMgrError e) {
 			System.err.println("\nSyntax error: " + e.getMessage());
 		} catch (StaticAnalysisException e) {
 			System.err.println("\nStatic semantics error: " + e.getMessage());
 		}
+	}
+
+	private static List<String> initArguments(String[] args) {
+		List<String> argList = new ArrayList<>(Arrays.asList(args));
+		Set<String> options = CLOptions.getFlags(argList, "pretty", "quiet", "tree", "interp", "sec");
+		pretty = options.contains("pretty");
+		quiet = options.contains("quiet");
+		tree = options.contains("tree");
+		interp = options.contains("interp");
+		security = options.contains("sec");
+		return argList;
 	}
 
 	private static Program parseInputProgram(List<String> argList) throws ParseException, FileNotFoundException {
@@ -115,10 +124,9 @@ public class Analyse {
 	}
 
 	private static void reportln(String msg, boolean silent) {
-		if (!silent) {
+		if (!silent)
 			System.out.print(msg + "\n");
-			System.out.flush();
-		}
+		System.out.flush();
 	}
 
 	private static void reportln(String msg) {

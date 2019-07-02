@@ -19,6 +19,7 @@ APP: $JAVA
      -tree
      -interp
      -quiet
+     -sec
 
 ################################################################################################
 [01]
@@ -80,3 +81,9 @@ NAME: Test how a command block influences program behaviour, e.g. scope
 APP: $APP
      $SOURCES\cmd-block
 STDOUT: cmd-block-$POSTFIX.txt
+
+[11]
+NAME: Program not typable in a flow-insensitive system, but obviously secure
+APP: $APP
+     $SOURCES\temp-public-private
+STDOUT: temp-public-private-$POSTFIX.txt
