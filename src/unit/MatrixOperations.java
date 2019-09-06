@@ -100,10 +100,10 @@ class MatrixOperations {
 	void closure() {
 //	     1 1 1 1
 //	     1 1 1 1
-//	     0 0 0 0
+//	     0 0 1 0
 //	     1 1 1 1
 		boolean[][] expectedMatrix = { { true, true, true, true }, { true, true, true, true },
-				{ false, false, false, false }, { true, true, true, true } };
+				{ false, false, true, false }, { true, true, true, true } };
 
 		DependencyMap expected = new DependencyMap(expectedMatrix, hm);
 

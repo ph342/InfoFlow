@@ -1,4 +1,6 @@
-fac(6; y);
+x = secret;
+fac(x; y);
+public = y;
 
 proc fac(in x; out y) {
   y = 1;

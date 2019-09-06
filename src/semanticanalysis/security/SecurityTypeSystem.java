@@ -50,6 +50,7 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		for (ProcDecl p : n.pds)
 			p.accept(this);
 
+		// Calculate transitive dependencies by composing the dependency maps
 		for (Cmd cmd : n.cmds)
 			dep = cmd.accept(this).composition(dep);
 
@@ -69,17 +70,21 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 	// Cmd cmd1,cmd2;
 	@Override
 	public DependencyMap visit(CmdIf n) {
-		DependencyMap dep = new DependencyMap(allVariables);
-		dep = dep.addDependencies(new Var(DependencyMap.PC), n.e.accept(new FreeVars()));
+		Var pc = new Var(DependencyMap.PC); // program counter variable
+		Set<Var> pcSet = new HashSet<Var>(); // set containing the program counter
+		pcSet.add(pc);
 
 		DependencyMap depCmd1 = n.cmd1.accept(this);
 		DependencyMap depCmd2 = n.cmd2.accept(this);
+
+		DependencyMap dep = new DependencyMap(allVariables);
+		dep = dep.addDependencies(pc, n.e.accept(new FreeVars()));
 
 		depCmd1 = depCmd1.composition(dep);
 		depCmd2 = depCmd2.composition(dep);
 
 		dep = depCmd1.union(depCmd2);
-		dep = dep.removeDependencies(new Var(DependencyMap.PC)); // reset program counter
+		dep = dep.replaceDependencies(pc, pcSet); // reset program counter
 
 		return dep;
 	}
@@ -88,17 +93,21 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 	// Cmd cmd;
 	@Override
 	public DependencyMap visit(CmdWhile n) {
-		DependencyMap dep = new DependencyMap(allVariables);
-		dep = dep.addDependencies(new Var(DependencyMap.PC), n.e.accept(new FreeVars()));
+		Var pc = new Var(DependencyMap.PC); // program counter variable
+		Set<Var> pcSet = new HashSet<Var>(); // set containing the program counter
+		pcSet.add(pc);
 
 		DependencyMap depCmd = n.cmd.accept(this);
+
+		DependencyMap dep = new DependencyMap(allVariables);
+		dep = dep.addDependencies(pc, n.e.accept(new FreeVars()));
 
 		dep = depCmd.composition(dep);
 		dep = dep.closure();
 
 		// add dependences of the pc to t to record the level of termination-sensitivity
 		dep = dep.raiseTerminationLevel();
-		dep = dep.removeDependencies(new Var(DependencyMap.PC)); // reset program counter
+		dep = dep.replaceDependencies(pc, pcSet); // reset program counter
 
 		return dep;
 	}
@@ -112,16 +121,13 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		Set<Var> dependencies = n.e.accept(new FreeVars());
 		dependencies.add(new Var(DependencyMap.PC)); // add pc
 
-		dep = dep.addDependencies(n.v, dependencies);
-		return dep; // TODO oneliner possible in a lot of methods
+		dep = dep.replaceDependencies(n.v, dependencies);
+		return dep;
 	}
 
-	// String id;
-	// List<Formal> infs;
-	// List<Formal> outfs;
-	// List<Cmd> cmds;
 	@Override
 	public DependencyMap visit(ProcDecl n) {
+		// simply store the procedure and don't produce a dependency map
 		allProcedures.put(n.id, n);
 		return null;
 	}
@@ -158,20 +164,26 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		 */
 		int counter = 0;
 		for (Var f : allFormals) {
-			formalsToPlaceholders.put(f, new Var(String.valueOf(counter)));
-			allPlaceholders.add(new Var(String.valueOf(counter)));
-			++counter;
+			Var placeholder = new Var(String.valueOf(counter++));
+			formalsToPlaceholders.put(f, placeholder);
+			allPlaceholders.add(placeholder);
 		}
 
 		allVariablesAndPlaceholders.addAll(allPlaceholders);
 		allVariablesAndPlaceholders.addAll(allVariables);
 
 		// Formal ins -> fv(actual ins)
+		// Formal outs -> empty set
 		inputDependencies = new DependencyMap(allVariablesAndPlaceholders);
 
 		for (int i = 0; i < n.ais.size(); ++i)
-			inputDependencies = inputDependencies.addDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
+			// the formal ins are initially dependent on fv(Exp)
+			inputDependencies = inputDependencies.replaceDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
 					n.ais.get(i).accept(new FreeVars()));
+
+		for (int i = 0; i < n.aos.size(); ++i)
+			// the formal outs are initially dependent on the empty set
+			inputDependencies = inputDependencies.removeDependencies(formalsToPlaceholders.get(proc.outfs.get(i)));
 
 		// Actual outs -> formal outs + pc
 		outputDependencies = new DependencyMap(allVariablesAndPlaceholders);
@@ -181,7 +193,7 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 			outDependencies.add(formalsToPlaceholders.get(proc.outfs.get(i)));
 			outDependencies.add(new Var(DependencyMap.PC)); // pc is a dependency
 
-			outputDependencies = outputDependencies.addDependencies(n.aos.get(i), outDependencies);
+			outputDependencies = outputDependencies.replaceDependencies(n.aos.get(i), outDependencies);
 		}
 
 		bodyDependencies = calculateProcBodyDependencies(proc, formalsToPlaceholders, allVariablesAndPlaceholders,
@@ -203,27 +215,37 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 	 */
 	private DependencyMap calculateProcBodyDependencies(ProcDecl proc, HashMap<Var, Var> formalsToPlaceholders,
 			HashSet<Var> allVariablesAndPlaceholders, HashSet<Var> allPlaceholders) {
+		Var pc = new Var(DependencyMap.PC); // program counter variable
+		Var t = new Var(DependencyMap.T); // termination variable
 
 		// Temporarily replace the set of program variables with the set of formals
 		Set<Var> originalVars = allVariables;
-		allVariables = formalsToPlaceholders.keySet(); // the key set is equivalent to all formals
+		allVariables = formalsToPlaceholders.keySet(); // the keySet is equivalent to all formals
 
 		// Generate the dependencies for the procedure body
-		DependencyMap bodyDependencies = new DependencyMap(formalsToPlaceholders.keySet());
+		DependencyMap bodyDependencies = new DependencyMap(allVariables);
 
 		for (Cmd cmd : proc.cmds)
 			bodyDependencies = cmd.accept(this).composition(bodyDependencies);
 
+		// restore program variables
 		allVariables = originalVars;
 
-		// Delta now: formals -> formals, without program variables
+		// Dependencies now: formals -> formals, without program variables
 		// needed: placeholders -> placeholders and all program variables
 		DependencyMap bodyDependenciesWithPlaceholders = new DependencyMap(allVariablesAndPlaceholders);
 		bodyDependencies = bodyDependencies.replaceVariables(formalsToPlaceholders);
 
+		// copy the dependencies of all placeholders
 		for (Var ph : allPlaceholders)
-			bodyDependenciesWithPlaceholders = bodyDependenciesWithPlaceholders.addDependencies(ph,
+			bodyDependenciesWithPlaceholders = bodyDependenciesWithPlaceholders.replaceDependencies(ph,
 					bodyDependencies.getDependencies(ph));
+
+		// copy the dependencies of pc and t
+		bodyDependenciesWithPlaceholders = bodyDependenciesWithPlaceholders.replaceDependencies(pc,
+				bodyDependencies.getDependencies(pc));
+		bodyDependenciesWithPlaceholders = bodyDependenciesWithPlaceholders.replaceDependencies(t,
+				bodyDependencies.getDependencies(t));
 
 		return bodyDependenciesWithPlaceholders;
 	}

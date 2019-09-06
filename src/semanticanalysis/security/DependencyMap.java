@@ -123,7 +123,7 @@ public final class DependencyMap {
 
 		for (int i = 0; i < matrix.length; ++i) {
 			for (int col = 0; col < matrix.length; ++col)
-				m[i][col] = matrix[i][col];
+				m[i][col] = matrix[i][col]; // simple copy
 
 			if (i == row)
 				// set every dependent variable to true, if it exists
@@ -137,8 +137,37 @@ public final class DependencyMap {
 	}
 
 	/**
-	 * Removes dependencies of a variable or the program counter, except the
-	 * dependency on itself. (Identity function for one variable) Complexity O(v^2)
+	 * Replace existing dependencies of a variable or the program counter. If an
+	 * empty set or null is passed, no actions will be taken. Complexity O(v^2)
+	 * 
+	 * @param v    Variable or program counter
+	 * @param vars Dependent variables (including pc) or nothing
+	 */
+	public DependencyMap replaceDependencies(Var v, Set<Var> vars) {
+		if (v == null || vars == null || vars.size() == 0 || !varMap.containsKey(v.id))
+			return this;
+
+		boolean[][] m = new boolean[matrix.length][matrix.length];
+		int row = varMap.get(v.id);
+
+		for (int i = 0; i < matrix.length; ++i) {
+			for (int col = 0; col < matrix.length; ++col)
+				if (i == row)
+					// set every dependent variable to true, if it exists
+					vars.forEach((dependentVar) -> {
+						if (varMap.containsKey(dependentVar.id))
+							m[row][varMap.get(dependentVar.id)] = true;
+					});
+				else
+					m[i][col] = matrix[i][col]; // simple copy
+		}
+
+		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
+	}
+
+	/**
+	 * Removes dependencies of a variable or the program counter, including the
+	 * dependency on itself. Complexity O(v^2)
 	 * 
 	 * @param v Variable to be reset
 	 */
@@ -152,7 +181,7 @@ public final class DependencyMap {
 		for (int row = 0; row < matrix.length; ++row) {
 			for (int col = 0; col < matrix.length; ++col)
 				if (row == varRow)
-					m[row][col] = row == col;
+					m[row][col] = false;
 				else
 					m[row][col] = matrix[row][col];
 		}
@@ -171,13 +200,13 @@ public final class DependencyMap {
 			return this;
 
 		// collect indexes of the new variables
-		Set<Integer> delIndex = new HashSet<Integer>();
+		Set<Integer> delIndexes = new HashSet<Integer>();
 		HashMap<String, Integer> newVars = new HashMap<String, Integer>(varMap);
 		for (Var v : vars) {
-			if (!varMap.containsKey(v.id))
+			if (!newVars.containsKey(v.id)) // valid variable?
 				continue;
 			int indexOld = newVars.get(v.id);
-			delIndex.add(varMap.get(v.id));
+			delIndexes.add(varMap.get(v.id));
 			newVars.remove(v.id);
 
 			// recalculate all existing indexes
@@ -189,23 +218,23 @@ public final class DependencyMap {
 		}
 
 		// anything to be done?
-		if (delIndex.size() == 0)
+		if (delIndexes.size() == 0)
 			return this;
 
 		// Transform NxN matrix to MxM
-		boolean[][] m = new boolean[matrix.length - delIndex.size()][matrix.length - delIndex.size()];
+		boolean[][] m = new boolean[matrix.length - delIndexes.size()][matrix.length - delIndexes.size()];
 		int rowNew = 0, colNew = 0;
 
 		for (int row = 0; row < matrix.length; ++row) {
 			// if this row is to be deleted, skip it
-			if (delIndex.contains(row))
+			if (delIndexes.contains(row))
 				continue;
 
 			// Copy this row
 			colNew = 0;
 			for (int col = 0; col < matrix.length; ++col) {
 				// if this column is to be deleted, skip it
-				if (delIndex.contains(col))
+				if (delIndexes.contains(col))
 					continue;
 
 				m[rowNew][colNew] = matrix[row][col];
@@ -230,10 +259,10 @@ public final class DependencyMap {
 
 		for (Iterator<Entry<Var, Var>> it = mapping.entrySet().iterator(); it.hasNext();) {
 			Entry<Var, Var> e = it.next();
-			if (varMap.containsKey(e.getKey().id)) {
-				newVars.put(e.getValue().id, newVars.get(e.getKey().id)); // put new
-				newVars.remove(e.getKey().id); // delete old
-			}
+			if (!varMap.containsKey(e.getKey().id))
+				continue; // variable not valid
+			newVars.put(e.getValue().id, newVars.get(e.getKey().id)); // put new
+			newVars.remove(e.getKey().id); // delete old
 		}
 		return new DependencyMap(matrix, newVars);
 	}
@@ -282,8 +311,11 @@ public final class DependencyMap {
 		// matrix multiplication with boolean arithmetics
 		for (int i = 0; i < matrix.length; ++i)
 			for (int j = 0; j < matrix.length; ++j)
-				for (int k = 0; k < matrix.length; k++)
+				for (int k = 0; k < matrix.length; ++k) {
 					m[i][j] = m[i][j] || (matrix[i][k] && d.matrix[k][j]);
+					if (m[i][j])
+						break; // early out
+				}
 
 		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
@@ -294,11 +326,11 @@ public final class DependencyMap {
 	public DependencyMap closure() {
 		boolean[][] m = deepCopy(matrix);
 
-		// Warshal's algorithm, reflectivity is given by the identity function
+		// Warshal's algorithm, plus reflectivity
 		for (int i = 0; i < m.length; ++i)
 			for (int j = 0; j < m.length; ++j)
 				for (int k = 0; k < m.length; ++k)
-					m[j][k] = m[j][k] || (m[j][i] && m[i][k]);
+					m[j][k] = m[j][k] || j == k || (m[j][i] && m[i][k]); // j==k guarantees reflectivity
 
 		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
 	}
@@ -326,8 +358,9 @@ public final class DependencyMap {
 	public String toString() {
 		Stack<String> result = new Stack<String>();
 		Stack<String> dependentVars = new Stack<String>();
+		result.setSize(3);
 
-		result.push("Dependencies of variables:\n");
+		result.insertElementAt("Dependencies of variables:\n", 0);
 
 		// Dependencies of all variables
 		for (Entry<String, Integer> e : varMap.entrySet()) {
@@ -356,11 +389,13 @@ public final class DependencyMap {
 				result.push(e.getKey() + " -> {" + dependentVars.toString() + "}\n");
 			}
 		}
+		
+		result.removeIf(n -> (n == null));
 
-		String unformatted = "";
+		String formatted = "";
 		for (String s : result)
-			unformatted += s;
-		return unformatted.replace("[", "").replace("]", "");
+			formatted += s;
+		return formatted.replace("[", "").replace("]", "");
 	}
 
 	/**

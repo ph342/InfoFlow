@@ -295,7 +295,7 @@ public class ASTPrinter extends Printer {
 		for (int i = 0; i < n.aos.size(); ++i)
 			formalToActualMapping.put(pd.outfs.get(i).id, new ExpVar(n.aos.get(i)));
 
-		this.iprintln("cmd"); // print top level node
+		this.iprintln("proc"); // print top level node
 		this.pushIndent(n);
 
 		/*
