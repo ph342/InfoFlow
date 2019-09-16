@@ -87,3 +87,9 @@ NAME: Program not typable in a flow-insensitive system, but obviously secure
 APP: $APP
      $SOURCES\temp-public-private
 STDOUT: temp-public-private-$POSTFIX.txt
+
+[12]
+NAME: Program without variables
+APP: $APP
+     $SOURCES\no-variables
+STDOUT: no-variables-$POSTFIX.txt
