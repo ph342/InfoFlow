@@ -148,54 +148,19 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 		// Set of all placeholders and all variables
 		HashSet<Var> allVariablesAndPlaceholders = new HashSet<>();
 
-		// Set of all formals
-		HashSet<Var> allFormals = new HashSet<Var>(proc.outfs);
-		allFormals.addAll(proc.infs);
-
 		DependencyMap inputDependencies; // placeholders -> actuals
 		DependencyMap outputDependencies; // actuals -> placeholders
 		DependencyMap bodyDependencies; // placeholders -> placeholders, contains actuals
 		DependencyMap finalWithPlaceholders; // composition
 
-		/*
-		 * Well-formedness ensures that formals are unique, but not that the names are
-		 * disjunct from program variables. To avoid name clashes when mapping formals
-		 * and actuals, formals will be replaced by unique placeholders.
-		 */
-		int counter = 0;
-		for (Var f : allFormals) {
-			Var placeholder = new Var(String.valueOf(counter++));
-			formalsToPlaceholders.put(f, placeholder);
-			allPlaceholders.add(placeholder);
-		}
+		// Replace formal parameters with placeholders
+		replaceFormalsWithPlaceholders(proc, formalsToPlaceholders, allPlaceholders);
 
 		allVariablesAndPlaceholders.addAll(allPlaceholders);
 		allVariablesAndPlaceholders.addAll(allVariables);
 
-		// Formal ins -> fv(actual ins)
-		// Formal outs -> empty set
-		inputDependencies = new DependencyMap(allVariablesAndPlaceholders);
-
-		for (int i = 0; i < n.ais.size(); ++i)
-			// the formal ins are initially dependent on fv(Exp)
-			inputDependencies = inputDependencies.replaceDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
-					n.ais.get(i).accept(new FreeVars()));
-
-		for (int i = 0; i < n.aos.size(); ++i)
-			// the formal outs are initially dependent on the empty set
-			inputDependencies = inputDependencies.removeDependencies(formalsToPlaceholders.get(proc.outfs.get(i)));
-
-		// Actual outs -> formal outs + pc
-		outputDependencies = new DependencyMap(allVariablesAndPlaceholders);
-
-		for (int i = 0; i < n.aos.size(); ++i) {
-			Set<Var> outDependencies = new HashSet<>();
-			outDependencies.add(formalsToPlaceholders.get(proc.outfs.get(i)));
-			outDependencies.add(new Var(DependencyMap.PC)); // pc is a dependency
-
-			outputDependencies = outputDependencies.replaceDependencies(n.aos.get(i), outDependencies);
-		}
-
+		inputDependencies = calculateProcInputDependencies(n, proc, allVariablesAndPlaceholders, formalsToPlaceholders);
+		outputDependencies = calculateProcOutputDependencies(n, proc, allVariablesAndPlaceholders, formalsToPlaceholders);
 		bodyDependencies = calculateProcBodyDependencies(proc, formalsToPlaceholders, allVariablesAndPlaceholders,
 				allPlaceholders);
 
@@ -204,6 +169,78 @@ public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 
 		// Remove placeholders from the mapping, since formals are no longer needed
 		return finalWithPlaceholders.removeVariables(allPlaceholders);
+	}
+
+	/**
+	 * Well-formedness ensures that formals are unique, but not that the names are
+	 * disjunct from program variables. To avoid name clashes when mapping formals
+	 * and actuals, formals will be replaced by unique placeholders.
+	 * 
+	 * @param formalsToPlaceholders Will be modified
+	 * @param allPlaceholders       Will be modified
+	 */
+	private void replaceFormalsWithPlaceholders(ProcDecl proc, HashMap<Var, Var> formalsToPlaceholders,
+			HashSet<Var> allPlaceholders) {
+
+		HashSet<Var> allFormals = new HashSet<Var>(proc.outfs); // Set of all formals
+		allFormals.addAll(proc.infs);
+
+		int counter = 0;
+		for (Var f : allFormals) {
+			Var placeholder = new Var(String.valueOf(counter++));
+			formalsToPlaceholders.put(f, placeholder);
+			allPlaceholders.add(placeholder);
+		}
+	}
+
+	/**
+	 * Calculates the dependencies of the input parameters of a procedure
+	 * declaration
+	 * 
+	 * @return Dependencies with all program variables, and placeholders instead of
+	 *         formals.
+	 */
+	private DependencyMap calculateProcInputDependencies(CmdCall n, ProcDecl proc, HashSet<Var> allVariablesAndPlaceholders,
+			HashMap<Var, Var> formalsToPlaceholders) {
+
+		// Formal ins -> fv(actual ins)
+		// Formal outs -> empty set
+		DependencyMap inputDependencies = new DependencyMap(allVariablesAndPlaceholders);
+
+		for (int i = 0; i < proc.infs.size(); ++i)
+			// the formal ins are initially dependent on fv(Exp)
+			inputDependencies = inputDependencies.replaceDependencies(formalsToPlaceholders.get(proc.infs.get(i)),
+					n.ais.get(i).accept(new FreeVars()));
+
+		for (int i = 0; i < proc.outfs.size(); ++i)
+			// the formal outs are initially dependent on the empty set
+			inputDependencies = inputDependencies.removeDependencies(formalsToPlaceholders.get(proc.outfs.get(i)));
+
+		return inputDependencies;
+	}
+
+	/**
+	 * Calculates the dependencies of the output parameters of a procedure
+	 * declaration
+	 * 
+	 * @return Dependencies with all program variables, and placeholders instead of
+	 *         formals.
+	 */
+	private DependencyMap calculateProcOutputDependencies(CmdCall n, ProcDecl proc,
+			HashSet<Var> allVariablesAndPlaceholders, HashMap<Var, Var> formalsToPlaceholders) {
+
+		// Actual outs -> formal outs + pc
+		DependencyMap outputDependencies = new DependencyMap(allVariablesAndPlaceholders);
+		Set<Var> dependencySet = new HashSet<>();
+
+		for (int i = 0; i < n.aos.size(); ++i) {
+			dependencySet.clear();
+			dependencySet.add(formalsToPlaceholders.get(proc.outfs.get(i)));
+			dependencySet.add(new Var(DependencyMap.PC)); // pc is a dependency
+
+			outputDependencies = outputDependencies.replaceDependencies(n.aos.get(i), dependencySet);
+		}
+		return outputDependencies;
 	}
 
 	/**
