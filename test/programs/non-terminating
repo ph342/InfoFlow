@@ -1,0 +1,9 @@
+toinfinity(secret; );
+
+proc toinfinity(in switch; ) {
+  if (switch)
+  while (true) 
+  {}
+  else
+  {}
+}

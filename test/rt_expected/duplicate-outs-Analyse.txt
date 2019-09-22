@@ -1,0 +1,8 @@
+foo(x, x);
+
+proc foo(out a, b) {
+  a = 1;
+  b = a + 2;
+}
+
+Static semantics error: Duplicate actual out-parameters in call to method: foo (line 1)

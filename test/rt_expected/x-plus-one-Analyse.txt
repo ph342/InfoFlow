@@ -1,0 +1,18 @@
+y = 1;
+x = x + y;
++- program
+   +- :=
+   |  +- y
+   |  +- 1
+   +- :=
+      +- x
+      +- +
+         +- x
+         +- y
+x=1  y=1  
+Dependencies of variables:
+pc -> {pc}
+t -> {t}
+x -> {pc, x}
+y -> {pc}
+

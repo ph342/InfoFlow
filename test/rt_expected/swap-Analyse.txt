@@ -1,0 +1,21 @@
+temp = x;
+x = y;
+y = temp;
++- program
+   +- :=
+   |  +- temp
+   |  +- x
+   +- :=
+   |  +- x
+   |  +- y
+   +- :=
+      +- y
+      +- temp
+temp=0  x=0  y=0  
+Dependencies of variables:
+pc -> {pc}
+t -> {t}
+x -> {pc, y}
+y -> {pc, x}
+temp -> {pc, x}
+

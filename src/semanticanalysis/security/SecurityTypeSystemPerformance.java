@@ -13,32 +13,32 @@ import syntaxtree.Program;
 import syntaxtree.Var;
 
 /**
- * Measuring performance of security type system
+ * Measuring performance of a security type system
  * 
  * @author dak1
  */
 public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 
-	private ArrayList<SimpleEntry<String, Long>> log;
+	private ArrayList<SimpleEntry<String, Float>> log;
 	private int indent;
 	private static final String INDENT = "--";
 
 	public SecurityTypeSystemPerformance(Set<Var> vars) {
 		super(vars);
-		log = new ArrayList<AbstractMap.SimpleEntry<String, Long>>();
+		log = new ArrayList<AbstractMap.SimpleEntry<String, Float>>();
 	}
 
 	@Override
 	public DependencyMap visit(Program n) {
 		Timer t = new Timer();
 		t.startTimer();
+		--indent;
 		DependencyMap m = super.visit(n);
-		log.add(new SimpleEntry<String, Long>(getIndent() + "Program", t.getRuntime()));
+		log.add(new SimpleEntry<String, Float>(getIndent() + "Program", t.getRuntime()));
 
-		System.out.println("Runtime analysis:");
+		System.out.println("Runtimes of security type-checker:");
 		log.forEach(entry -> {
-			String out = String.format("%-20s %5d%2s\n", entry.getKey(), entry.getValue(), "ms")
-					.replaceAll("(.*starts\\s*)0ms", "$1");
+			String out = String.format("%-20s %.2f%2s\n", entry.getKey(), entry.getValue(), "ms");
 			System.out.print(out);
 		});
 		System.out.println();
@@ -50,10 +50,9 @@ public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 	public DependencyMap visit(CmdIf n) {
 		Timer t = new Timer();
 		int currentListIndex = log.size();
-		++indent;
 		t.startTimer();
 		DependencyMap m = super.visit(n);
-		log.add(currentListIndex, new SimpleEntry<String, Long>(getIndent() + "If", t.getRuntime()));
+		log.add(currentListIndex, new SimpleEntry<String, Float>(getIndent() + "If", t.getRuntime()));
 		return m;
 	}
 
@@ -61,10 +60,9 @@ public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 	public DependencyMap visit(CmdWhile n) {
 		Timer t = new Timer();
 		int currentListIndex = log.size();
-		++indent;
 		t.startTimer();
 		DependencyMap m = super.visit(n);
-		log.add(currentListIndex, new SimpleEntry<String, Long>(getIndent() + "While", t.getRuntime()));
+		log.add(currentListIndex, new SimpleEntry<String, Float>(getIndent() + "While", t.getRuntime()));
 		return m;
 	}
 
@@ -72,9 +70,8 @@ public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 	public DependencyMap visit(CmdAssign n) {
 		Timer t = new Timer();
 		t.startTimer();
-		++indent;
 		DependencyMap m = super.visit(n);
-		log.add(new SimpleEntry<String, Long>(getIndent() + "Assign", t.getRuntime()));
+		log.add(new SimpleEntry<String, Float>(getIndent() + "Assign", t.getRuntime()));
 		return m;
 	}
 
@@ -82,10 +79,9 @@ public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 	public DependencyMap visit(CmdCall n) {
 		Timer t = new Timer();
 		int currentListIndex = log.size();
-		++indent;
 		t.startTimer();
 		DependencyMap m = super.visit(n);
-		log.add(currentListIndex, new SimpleEntry<String, Long>(getIndent() + "Call", t.getRuntime()));
+		log.add(currentListIndex, new SimpleEntry<String, Float>(getIndent() + "Call", t.getRuntime()));
 		return m;
 	}
 
@@ -102,10 +98,11 @@ public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 
 		private void startTimer() {
 			lStartTime = System.nanoTime();
+			++indent;
 		}
 
-		private long getRuntime() {
-			return (System.nanoTime() - lStartTime) / 1000000;
+		private Float getRuntime() {
+			return ((float) (System.nanoTime() - lStartTime) / 1000000);
 		}
 	}
 }

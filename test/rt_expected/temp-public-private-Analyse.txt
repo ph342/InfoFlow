@@ -1,0 +1,35 @@
+tmp = secret1;
+secret1 = secret2;
+secret2 = tmp;
+tmp = public1;
+public1 = public2;
+public2 = tmp;
++- program
+   +- :=
+   |  +- tmp
+   |  +- secret1
+   +- :=
+   |  +- secret1
+   |  +- secret2
+   +- :=
+   |  +- secret2
+   |  +- tmp
+   +- :=
+   |  +- tmp
+   |  +- public1
+   +- :=
+   |  +- public1
+   |  +- public2
+   +- :=
+      +- public2
+      +- tmp
+public1=0  public2=0  tmp=0  secret2=0  secret1=0  
+Dependencies of variables:
+pc -> {pc}
+t -> {t}
+public1 -> {pc, public2}
+public2 -> {pc, public1}
+tmp -> {pc, public1}
+secret2 -> {pc, secret1}
+secret1 -> {pc, secret2}
+

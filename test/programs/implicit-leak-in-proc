@@ -1,0 +1,12 @@
+totally_confidential(true, password, hair_colour; public_horoscope);
+
+proc totally_confidential(in has_username, password, additionaldata; out your_horoscope) {
+	if(has_username==true) {
+		while(password>0) {
+			password = password - 1;
+			your_horoscope = additionaldata * 5;
+		}
+	}
+	else
+		your_horoscope = additionaldata;
+}

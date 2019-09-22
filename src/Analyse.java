@@ -100,11 +100,11 @@ public class Analyse {
 			}
 
 		} catch (java.io.FileNotFoundException e) {
-			System.err.println("\nUnable to read input file. " + e.getMessage());
+			System.out.println("\nUnable to read input file. " + e.getMessage());
 		} catch (ParseException | TokenMgrError e) {
-			System.err.println("\nSyntax error: " + e.getMessage());
+			System.out.println("\nSyntax error: " + e.getMessage());
 		} catch (StaticAnalysisException e) {
-			System.err.println("\nStatic semantics error: " + e.getMessage());
+			System.out.println("\nStatic semantics error: " + e.getMessage());
 		}
 	}
 

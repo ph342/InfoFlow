@@ -1,0 +1,25 @@
+toinfinity(secret; );
+
+proc toinfinity(in switch; ) {
+  if (switch)
+  while (true) 
+  {
+  }
+  else
+  {
+  }
+}
++- program
+   +- proc
+      +- if
+         +- secret
+         +- while
+         |  +- true
+         |  +- {}
+         +- {}
+
+Dependencies of variables:
+pc -> {pc}
+t -> {pc, t, secret}
+secret -> {secret}
+
