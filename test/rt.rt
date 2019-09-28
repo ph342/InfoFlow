@@ -1,9 +1,9 @@
 [ENV]
 # Binaries directory
-SET: BIN: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\bin
+SET: BIN: ...\Thesis\workspace\InfoFlow\bin
 
 # Program sources directory
-SET: SOURCES: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\test\programs
+SET: SOURCES: ...\Thesis\workspace\InfoFlow\test\programs
 
 # Some postfix
 SET: POSTFIX: Analyse
