@@ -1,0 +1,11 @@
+nothing();
+
+proc nothing() {
+}
++- program
+   +- proc
+
+Dependencies of variables:
+pc -> {pc}
+t -> {t}
+

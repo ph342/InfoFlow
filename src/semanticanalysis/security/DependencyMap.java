@@ -15,7 +15,7 @@ import syntaxtree.Var;
  * variables. "The semantic content of Delta can be understood as a set of
  * dependencies." (p.7)
  * 
- * @author dak1
+ * @author Dominik
  */
 public final class DependencyMap {
 
@@ -277,11 +277,11 @@ public final class DependencyMap {
 		int pcRow = varMap.get(PC);
 
 		for (int row = 0; row < matrix.length; ++row) {
-			for (int col = 0; col < matrix.length; ++col)
-				if (row == tRow)
-					m[row][col] = m[pcRow][col] || row == col;
-				else
-					m[row][col] = matrix[row][col];
+			for (int col = 0; col < matrix.length; ++col) {
+				m[row][col] = matrix[row][col]; // never remove dependencies of t
+				if (row == tRow && !m[row][col])
+					m[row][col] = matrix[pcRow][col] || row == col;
+			}
 		}
 
 		return new DependencyMap(m, new HashMap<String, Integer>(varMap));
@@ -389,7 +389,7 @@ public final class DependencyMap {
 				result.push(e.getKey() + " -> {" + dependentVars.toString() + "}\n");
 			}
 		}
-		
+
 		result.removeIf(n -> (n == null));
 
 		String formatted = "";

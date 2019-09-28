@@ -1,7 +1,4 @@
 [ENV]
-# Java.exe directory
-SET: JAVA: C:\Program Files\Java\jdk-11\bin\java.exe
-
 # Binaries directory
 SET: BIN: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlow\bin
 
@@ -11,15 +8,15 @@ SET: SOURCES: D:\GoogleDrive\Dokumente\London study MSc\Thesis\workspace\InfoFlo
 # Some postfix
 SET: POSTFIX: Analyse
 
-APP: $JAVA
+APP: C:\Program Files\Java\jdk-11\bin\java.exe
      -cp
      $BIN
      Analyse
      -pretty
      -tree
      -interp
-     -quiet
      -sec
+     -quiet
 
 ################################################################################################
 [01]
@@ -35,7 +32,7 @@ APP: $APP
 STDOUT: swap-procedural-$POSTFIX.txt
 
 [03]
-NAME: Pass same variable to POSTFIX with two outs 
+NAME: Pass same variable to procedure with two outs 
 APP: $APP
      $SOURCES\duplicate-outs
 STDOUT: duplicate-outs-$POSTFIX.txt
@@ -65,7 +62,7 @@ APP: $APP
 STDOUT: full-code-coverage-$POSTFIX.txt
 
 [08]
-NAME: A procedure with no in- or out-formals is equivalent to skip
+NAME: A procedure with no formals but variables
 APP: $APP
      $SOURCES\skip-procedural
 STDOUT: skip-procedural-$POSTFIX.txt
@@ -87,3 +84,33 @@ NAME: Program not typable in a flow-insensitive system, but obviously secure
 APP: $APP
      $SOURCES\temp-public-private
 STDOUT: temp-public-private-$POSTFIX.txt
+
+[12]
+NAME: Program without variables
+APP: $APP
+     $SOURCES\no-variables
+STDOUT: no-variables-$POSTFIX.txt
+
+[13]
+NAME: Program with a thousand LOC
+APP: $APP
+     $SOURCES\thousand-loc
+STDOUT: thousand-loc-$POSTFIX.txt
+
+[14]
+NAME: Program that leaks a secret implicitly inside a procedure
+APP: $APP
+     $SOURCES\implicit-leak-in-proc
+STDOUT: implicit-leak-in-proc-$POSTFIX.txt
+
+[15]
+NAME: Procedure with lots of parameters and all depend on each other
+APP: $APP
+     $SOURCES\many-parameters
+STDOUT: many-parameters-$POSTFIX.txt
+
+[16]
+NAME: Non-terminating program depending on a secret
+APP: $APP
+     $SOURCES\non-terminating
+STDOUT: non-terminating-$POSTFIX.txt

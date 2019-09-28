@@ -115,11 +115,13 @@ public class PrettyPrinter extends Printer {
 			}
 			this.print("; ");
 		}
-		this.print("out ");
-		for (int i = 0; i < n.outfs.size(); i++) {
-			n.outfs.get(i).accept(this);
-			if ((i + 1) < n.outfs.size())
-				this.print(", ");
+		if (n.outfs.size() > 0) {
+			this.print("out ");
+			for (int i = 0; i < n.outfs.size(); i++) {
+				n.outfs.get(i).accept(this);
+				if ((i + 1) < n.outfs.size())
+					this.print(", ");
+			}
 		}
 		this.println(") {");
 		indent++;
@@ -155,7 +157,7 @@ public class PrettyPrinter extends Printer {
 	public Void visit(CmdIf n) {
 		this.iprint("if (");
 		n.e.accept(this);
-		this.println(") then");
+		this.println(")");
 		n.cmd1.accept(this);
 		this.iprintln("else");
 		n.cmd2.accept(this);

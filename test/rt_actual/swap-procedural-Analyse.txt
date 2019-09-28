@@ -1,0 +1,21 @@
+swap(x1, x2; x1, x2);
+
+proc swap(in x1, x2; out y1, y2) {
+  y1 = x2;
+  y2 = x1;
+}
++- program
+   +- proc
+      +- :=
+      |  +- x1
+      |  +- x2
+      +- :=
+         +- x2
+         +- x1
+x1=0  x2=0  
+Dependencies of variables:
+pc -> {pc}
+t -> {t}
+x1 -> {pc, x2}
+x2 -> {pc, x1}
+

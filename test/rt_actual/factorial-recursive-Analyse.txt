@@ -1,0 +1,15 @@
+fac(z; x);
+
+proc fac(in x; out y) {
+  if (x < 3)
+  {
+    y = x;
+  }
+  else
+  {
+    fac(x - 1; y);
+    y = y * x;
+  }
+}
+
+Static semantics error: Method fac contains a procedure call. (line 7)

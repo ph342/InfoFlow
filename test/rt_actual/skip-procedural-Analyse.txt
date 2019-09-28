@@ -1,0 +1,8 @@
+skip();
+
+proc skip() {
+  y1 = x2;
+  y2 = x1;
+}
+
+Static semantics error: Method skip contains free variables or local variables. (line 3)

@@ -16,6 +16,7 @@ import semanticanalysis.FreeVars;
 import semanticanalysis.StaticAnalysisException;
 import semanticanalysis.SymbolTableBuilder;
 import semanticanalysis.security.SecurityTypeSystem;
+import semanticanalysis.security.SecurityTypeSystemPerformance;
 import semanticanalysis.wellformedness.WellFormednessChecker;
 import syntaxtree.Program;
 
@@ -24,7 +25,7 @@ import syntaxtree.Program;
  */
 public class Analyse {
 
-	private static boolean pretty = false, quiet = false, tree = false, interp = false, security = false;;
+	private static boolean pretty = false, quiet = false, tree = false, interp = false, security = false, perf = false;
 
 	/**
 	 * Analyse a While-program.
@@ -37,7 +38,8 @@ public class Analyse {
 	 *             <li>-quiet (suppress progress messages)
 	 *             <li>-tree (print AST)
 	 *             <li>-interp (execute program and observe mem store)
-	 *             <li>-sec (execute security type system checks)
+	 *             <li>-sec (execute security type system checks) *
+	 *             <li>-perf (execute performance analysis of security type system)
 	 *             </ul>
 	 */
 	public static void main(String[] args) {
@@ -88,28 +90,33 @@ public class Analyse {
 
 			// Security type checking
 			if (security) {
+				SecurityTypeSystem sec;
 				reportln("\nEstablishing dependency map for security checks...");
-				SecurityTypeSystem sec = new SecurityTypeSystem(root.accept(new FreeVars()));
+				if (perf) // Performance analysis
+					sec = new SecurityTypeSystemPerformance(root.accept(new FreeVars()));
+				else
+					sec = new SecurityTypeSystem(root.accept(new FreeVars()));
 				reportln(root.accept(sec).toString(), false);
 			}
 
 		} catch (java.io.FileNotFoundException e) {
-			System.err.println("\nUnable to read input file. " + e.getMessage());
+			System.out.println("\nUnable to read input file. " + e.getMessage());
 		} catch (ParseException | TokenMgrError e) {
-			System.err.println("\nSyntax error: " + e.getMessage());
+			System.out.println("\nSyntax error: " + e.getMessage());
 		} catch (StaticAnalysisException e) {
-			System.err.println("\nStatic semantics error: " + e.getMessage());
+			System.out.println("\nStatic semantics error: " + e.getMessage());
 		}
 	}
 
 	private static List<String> initArguments(String[] args) {
 		List<String> argList = new ArrayList<>(Arrays.asList(args));
-		Set<String> options = CLOptions.getFlags(argList, "pretty", "quiet", "tree", "interp", "sec");
+		Set<String> options = CLOptions.getFlags(argList, "pretty", "quiet", "tree", "interp", "sec", "perf");
 		pretty = options.contains("pretty");
 		quiet = options.contains("quiet");
 		tree = options.contains("tree");
 		interp = options.contains("interp");
 		security = options.contains("sec");
+		perf = options.contains("perf");
 		return argList;
 	}
 
