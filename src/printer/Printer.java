@@ -7,7 +7,7 @@ import visitor.VisitorAdapter;
 /**
  * Abstract class for printers
  * 
- * @author dak1
+ * @author Dominik
  */
 public abstract class Printer extends VisitorAdapter<Void> {
 

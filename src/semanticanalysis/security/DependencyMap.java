@@ -15,7 +15,7 @@ import syntaxtree.Var;
  * variables. "The semantic content of Delta can be understood as a set of
  * dependencies." (p.7)
  * 
- * @author dak1
+ * @author Dominik
  */
 public final class DependencyMap {
 

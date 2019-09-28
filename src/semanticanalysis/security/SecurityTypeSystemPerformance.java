@@ -15,7 +15,7 @@ import syntaxtree.Var;
 /**
  * Measuring performance of a security type system
  * 
- * @author dak1
+ * @author Dominik
  */
 public class SecurityTypeSystemPerformance extends SecurityTypeSystem {
 

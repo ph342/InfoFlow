@@ -22,7 +22,7 @@ import visitor.VisitorAdapter;
  * all commands. The visitor does not have to override methods for expressions,
  * because the type system only considers free variables of epressions.
  * 
- * @author dak1
+ * @author Dominik
  */
 public class SecurityTypeSystem extends VisitorAdapter<DependencyMap> {
 
